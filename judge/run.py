@@ -103,7 +103,8 @@ def elaborate(src, env, toolchain, work, trusted_example):
                 "-v", f"{toolchain}:/opt/lean:ro", "-v", f"{ROOT}/.lake:/course/.lake:ro",
                 "-v", f"{ROOT}/judge/Extract.lean:/Extract.lean:ro",
                 "-v", f"{work}/Entry.lean:/input/Entry.lean:ro",
-                "-e", "HOME=/tmp", "-e", "LEAN_ABORT_ON_PANIC=1", "-e", "LEAN_NUM_THREADS=2",
+                "-e", "PATH=/opt/lean/bin:/usr/local/bin:/usr/bin:/bin", "-e", "HOME=/tmp",
+                "-e", "LEAN_ABORT_ON_PANIC=1", "-e", "LEAN_NUM_THREADS=2",
                 "-e", f"LEAN_PATH=/tmp:{search}", "-w", "/tmp", SANDBOX_IMAGE, "sh", "-ec",
                 "cp /input/Entry.lean Entry.lean; "
                 "/opt/lean/bin/lean -o Entry.olean Entry.lean >&2; "
