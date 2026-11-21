@@ -86,7 +86,15 @@ def elaborate(src, env, toolchain, work, trusted_example):
                        cwd=work, env=inside, check=True, timeout=180, stdout=sys.stderr)
     else:
         # No token, network, host workspace, docker socket, runner commands or shared writable mounts.
-        search = env["LEAN_PATH"].replace(str(ROOT), "/course").replace(str(toolchain), "/opt/lean")
+        # Lake can resolve symlinks in its search path. Map each path to a mounted directory.
+        search_dirs = []
+        for raw in env["LEAN_PATH"].split(os.pathsep):
+            path = Path(raw).resolve()
+            if path.is_relative_to(toolchain.resolve()):
+                search_dirs.append(str(Path("/opt/lean") / path.relative_to(toolchain.resolve())))
+            else:
+                search_dirs.append(str(Path("/course/.lake") / path.relative_to(ROOT / ".lake")))
+        search = ":".join(search_dirs)
         argv = ["docker", "run", "--rm", "--network=none", "--read-only", "--cap-drop=ALL",
                 "--security-opt=no-new-privileges", "--pids-limit=128", "--memory=6g",
                 "--memory-swap=6g", "--cpus=2", "--user=65534:65534", "--ulimit",
@@ -169,7 +177,11 @@ def main():
         result = {"status": "rejected", "reason": " ".join(str(exc).split())[-1000:]}
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(result, indent=2) + "\n")
-    print(result["status"], result.get("nodes", ""))
+    if result["status"] == "accepted":
+        print(f"accepted {result['nodes']} nodes")
+    else:
+        # Keep diagnostics on one JSON-escaped line, including arbitrary compiler text.
+        print("rejected " + json.dumps(result["reason"], ensure_ascii=True))
     if result["status"] != "accepted" and not args.event:
         raise SystemExit(1)
 
