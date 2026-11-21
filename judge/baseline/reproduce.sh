@@ -3,6 +3,7 @@
 set -euo pipefail
 work=${1:?supply a work directory containing mathlib-names.jsonl.gz}
 test -f "$work/mathlib-names.jsonl.gz"
+mkdir -p "$work/archive-graph"
 g++ -O3 -std=c++20 judge/baseline/index.cpp -o "$work/index"
 g++ -O3 -std=c++20 judge/baseline/measure.cpp -o "$work/measure"
 python3 -c '
@@ -32,3 +33,4 @@ if actual != expected:
 (work / "result.json").write_text(result)
 print(json.dumps(actual, indent=2))
 PY
+python3 judge/baseline/graph_assets.py "$work" judge/baseline.json

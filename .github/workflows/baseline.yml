@@ -5,6 +5,8 @@ on:
     paths:
       - 'judge/baseline/**'
       - 'judge/baseline.json'
+      - 'judge/archive_graph.lock.json'
+      - 'judge/fetch_graph.py'
       - 'lean-toolchain'
       - 'lake-manifest.json'
       - '.github/workflows/baseline.yml'
@@ -56,3 +58,44 @@ jobs:
           name: ordinary-rh-footprint
           path: .out/baseline/result.json
           if-no-files-found: error
+      - name: Verify graph against pinned per-file digests
+        run: python3 judge/fetch_graph.py --verify .out/baseline/archive-graph.tar.gz
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: verified-archive-graph
+          path: .out/baseline/archive-graph.tar.gz
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 1
+  publish_graph:
+    needs: measure
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    concurrency:
+      group: rh-graph-release
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: verified-archive-graph
+          path: .out/release
+      - name: Publish and verify the pinned graph release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          tag=$(python3 judge/fetch_graph.py --tag)
+          file=.out/release/archive-graph.tar.gz
+          python3 judge/fetch_graph.py --verify "$file"
+          if ! gh release view "$tag" >/dev/null 2>&1; then
+            gh release create "$tag" "$file" --target "$GITHUB_SHA" --latest=false \
+              --title "Audited ordinary RH dependency graph" \
+              --notes "Derived from the pinned Lean export. The per-file checksums are recorded in judge/archive_graph.lock.json."
+          fi
+          gh release download "$tag" --pattern archive-graph.tar.gz --dir .out/published
+          python3 judge/fetch_graph.py --verify .out/published/archive-graph.tar.gz

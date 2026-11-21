@@ -128,6 +128,35 @@ struct Graph {
     std::sort(g.dependencies.begin(), g.dependencies.end());
     g.dependencies.erase(std::unique(g.dependencies.begin(), g.dependencies.end()), g.dependencies.end());
   }
+  void write_substitution_graph(const std::string& dir, Word root) {
+    // At this point only declarations reachable from ordinary RH are measured.
+    // Reference counts let independent edits update the closure incrementally.
+    std::vector<Word> references(groups.size());
+    references[root] = 1;
+    for (const auto& g : groups) {
+      if (g.measured) for (auto dep : g.dependencies) ++references.at(dep);
+    }
+    std::ofstream nodes(dir + "/archive-graph/groups.bin", std::ios::binary);
+    std::ofstream edges(dir + "/archive-graph/dependencies.bin", std::ios::binary);
+    nodes.exceptions(std::ios::badbit | std::ios::failbit);
+    edges.exceptions(std::ios::badbit | std::ios::failbit);
+    Word offset = 0;
+    for (Word id = 0; id < groups.size(); ++id) {
+      if (id) measure_group(id);
+      const auto& g = groups[id];
+      if (g.weight >= none || g.dependencies.size() >= none-offset)
+        throw std::runtime_error("archive group or edge count too large");
+      for (auto dep : g.dependencies) {
+        if (dep >= id) throw std::runtime_error("archive group order is not topological");
+      }
+      Word degree = static_cast<Word>(g.dependencies.size());
+      std::array<Word, 4> record{static_cast<Word>(g.weight), offset, degree, references[id]};
+      nodes.write(reinterpret_cast<const char*>(record.data()), sizeof(record));
+      if (degree) edges.write(reinterpret_cast<const char*>(g.dependencies.data()), degree*sizeof(Word));
+      offset += degree;
+    }
+  }
+
   std::pair<std::uint64_t, Word> total(Word root, Word cut) {
     std::vector<bool> seen(groups.size());
     std::priority_queue<Word> pending;
@@ -154,6 +183,7 @@ int main(int argc, char** argv) {
   Word root = std::stoul(argv[2]), cut = std::stoul(argv[3]);
   Word wrapper = std::stoul(argv[4]), bridge = std::stoul(argv[5]), allChi = std::stoul(argv[6]);
   auto total = graph.total(root, 0);
+  graph.write_substitution_graph(argv[1], root);
   auto spine = graph.total(root, cut);
   auto leaf = graph.total(cut, 0);
   auto edge = [&](Word a, Word b) {

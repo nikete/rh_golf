@@ -1,0 +1,21 @@
+{
+  "export_sha256": "61a8938ad5f5e57397c1c0e3b954916af546d9004ade01c3555744a681b05381",
+  "files": {
+    "dependencies.bin": {
+      "bytes": 55977976,
+      "sha256": "2bd90e94fb8d9cb9d7e86192d9b2dddd49db125a5d042f9ced408bf8f79573d7"
+    },
+    "groups.bin": {
+      "bytes": 20142480,
+      "sha256": "940b6b40486c950d95592979a9f9fa19e5b7d4b2a662c52582801d075a758a70"
+    },
+    "manifest.json": {
+      "bytes": 178,
+      "sha256": "807e4a29b1f8f318fc77ab697c2598732e12e5e2e34cbe4638c2dbf24c0fba0c"
+    },
+    "names.tsv": {
+      "bytes": 97691558,
+      "sha256": "0a4a75ac4d79e76b64f3509089cc2e8f83a42d1749ba8059116c7431b179e096"
+    }
+  }
+}
