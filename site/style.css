@@ -21,3 +21,10 @@
 .submit-target { margin-bottom: 2.5rem; }
 .submit-target p { max-width: 72ch; }
 .submit-target pre { padding: 1rem; overflow-x: auto; background: #e6edda; border-left: 3px solid #739b44; }
+
+.agent-start .buttons{align-items:center;gap:1rem;flex-wrap:wrap}
+.agent-start button{font:inherit;cursor:pointer}
+.agent-start button[hidden]{display:none}
+.agent-start details{margin-top:1rem}
+.agent-start summary{cursor:pointer}
+.agent-start pre{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.5}

@@ -188,7 +188,7 @@ def render(ledger, output):
     for r in rows:
         r["points"] = credits.get(r["issue"], 0)
     output.mkdir(parents=True, exist_ok=True)
-    for file in ("style.css", "identity.svg", "critical-strip.svg"):
+    for file in ("style.css", "identity.svg", "critical-strip.svg", "copy-prompt.js"):
         shutil.copyfile(ROOT / "site" / file, output / file)
     (output / ".nojekyll").write_text("")
     shell = (ROOT / "site/base.html").read_text()
@@ -313,13 +313,26 @@ def render(ledger, output):
     if project["pending_issues"]:
         history_table += "<p>Awaiting whole-proof replay: " + ", ".join(
             link(f"{GITHUB}/issues/{i}", f"#{i}") for i in project["pending_issues"]) + ".</p>"
+    readme = (ROOT / "README.md").read_text()
+    section = readme.split("## Start an agent\n", 1)[1].split("\n## ", 1)[0]
+    prompt = section.split("```text\n", 1)[1].split("\n```", 1)[0]
+    (output / "agent-prompt.txt").write_text(prompt + "\n")
     page("index.html", "RH Golf · Riemann proof league", f"""
     <section class='hero'><div class='herocopy'>
     <h1>Riemann<br><em>Proof Golf</em></h1><p class='intro'>Shrink a theorem or definition anywhere in the Lean proof of the Riemann hypothesis. Each node removed from the complete proof earns one point.</p>
     <div class='buttons'><a class='primary' href='{entry_url}'>Submit a replacement ↗</a>
-    <a class='plain' href='proof.html'>Explore the proof →</a></div></div>
+    <a class='plain' href='#agent'>Play with an agent →</a></div></div>
     <figure><img src='critical-strip.svg' width='530' height='322' alt='The critical line at real part one half, with the first three positive zeta zero heights marked.'>
     <figcaption>Critical strip <span>ζ(s) = 0</span></figcaption></figure></section>
+    <section id='agent' class='agent-start'>
+      <h2>Play with an agent</h2>
+      <p>Paste this into a coding agent with a terminal. It will fetch the current record, try theorem substitutions and measure what they save. The starter needs Git, curl and Python 3.11+ on Linux or macOS.</p>
+      <div class='buttons'><button type='button' id='copy-prompt' class='primary' hidden>Copy agent prompt</button>
+      <a href='agent-prompt.txt'>Open plain text</a>
+      <a href='{GITHUB}/blob/main/README.md#submit-your-agents-result'>Submission guide</a></div>
+      <details id='agent-details'><summary>Read the prompt</summary><pre id='agent-prompt' tabindex='0'>{esc(prompt)}</pre></details>
+      <span id='copy-status' role='status'></span><script src='copy-prompt.js' defer></script>
+    </section>
     {total_panel}{bounties}<section id='course' class='submit-target'><div class='sectionhead'><h2>Choose a declaration</h2>
     <div>{link(archive_url, 'Browse the archive ↗')} · {link(graph_url, 'Declaration names and node costs ↗')}</div></div>
     <p>Use the declaration’s full Lean name in a new issue title. For example, to replace the reflection step, use</p>

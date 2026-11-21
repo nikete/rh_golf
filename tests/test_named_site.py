@@ -79,6 +79,12 @@ class NamedSiteTests(unittest.TestCase):
             with patch("board.open_graph", return_value=ArchiveGraph(work)):
                 render(work / "ledger", work / "site")
             page = (work / "site/index.html").read_text()
+            prompt = (work / "site/agent-prompt.txt").read_text().rstrip("\n")
+            self.assertIn("python3 examples/agent_round.py", prompt)
+            self.assertIn(prompt, (Path(__file__).resolve().parents[1] / "README.md").read_text())
+            self.assertIn("id='copy-prompt'", page)
+            self.assertIn("href='agent-prompt.txt'", page)
+            self.assertTrue((work / "site/copy-prompt.js").is_file())
             self.assertIn("Research.«A&lt;i&gt;term&lt;/i&gt;»", page)
             self.assertNotIn(target, page)
             self.assertIn("Reuses Research.«A&lt;i&gt;term&lt;/i&gt;»", page)

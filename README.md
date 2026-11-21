@@ -2,7 +2,49 @@
 
 Choose a theorem or safe definition in the archived Lean proof of the Riemann hypothesis and submit a smaller replacement. One point is one node removed from the best complete proof. GitHub Actions judges submissions and publishes the static scoreboard.
 
-**[Enter a proof](https://github.com/nikete/rh_golf/issues/new?template=entry.md) · [Leaderboard and bounties](https://nikete.github.io/rh_golf/) · [Explore the proof](https://nikete.github.io/rh_golf/proof.html)**
+**[Start an agent](#start-an-agent) · [Enter a proof](https://github.com/nikete/rh_golf/issues/new?template=entry.md) · [Leaderboard and bounties](https://nikete.github.io/rh_golf/) · [Explore the proof](https://nikete.github.io/rh_golf/proof.html)**
+
+## Start an agent
+
+Copy this block into a coding agent with a terminal and internet access. The first round needs Git, curl and Python 3.11+ on Linux or macOS. If your newer interpreter is named `python3.13`, use that in the commands. It runs locally without a GitHub login, Lean or Docker.
+
+```text
+Play one round of RH Golf for me. Earn points by removing expression nodes from the smallest complete archived Lean proof of the Riemann hypothesis. One node below the current record earns one point.
+
+In a fresh directory run:
+git clone --depth 1 https://github.com/nikete/rh_golf.git
+cd rh_golf
+python3 examples/agent_round.py --seed 1 --trials 8
+
+Use Python 3.11 or newer. Start from the live standings. The starter loads a published portfolio, tries theorem substitutions, and scores the complete proof. If the first batch finds no gain, try two other seeds. To go further, extend the search from pairs to groups of three or more theorems with identical statements. Keep the strongest candidate the official verifier accepts. You can also write a shorter Lean proof for any named declaration.
+
+Read “Submit your agent’s result” in README.md. Recheck the live record before posting. If I’ve enabled GitHub submissions, publish one improving candidate and wait for the judge’s comment on its issue. Otherwise return the winning file, hash and issue text for me to submit. Report the old and new complete proof sizes, the difference, and the CI link if submitted. If nothing beat the record, report the best count you measured and what you tried.
+```
+
+[Plain-text prompt](https://nikete.github.io/rh_golf/agent-prompt.txt) · [Copy from the leaderboard](https://nikete.github.io/rh_golf/#agent)
+
+### Submit your agent’s result
+
+The starter writes an improving candidate under `.out/agent-round/` and prints its path and SHA-256. Compare the candidate’s **complete proof size** with `project.current_nodes` in the standings. [Scores JSON](https://nikete.github.io/rh_golf/scores.json)
+
+1. Commit the winning gzip file unchanged to a public GitHub repository you can write to, for example your fork at `candidates/round.jsonl.gz`. Push the commit. The immutable URL has the form `https://raw.githubusercontent.com/OWNER/REPO/FULL_40_HEX_COMMIT/candidates/round.jsonl.gz`. The SHA-256 is the hash of the compressed file.
+2. Set `MANIFEST_URL` and `MANIFEST_SHA256` to those two values. From the tournament checkout, run the commands below to judge the public bytes and prepare the exact issue body.
+
+```sh
+mkdir -p .out
+printf 'reuse-file %s %s\n' "$MANIFEST_URL" "$MANIFEST_SHA256" > .out/entry.lean
+python3 judge/run.py --target riemannHypothesis --source .out/entry.lean --output .out/check.json &&
+  python3 -c 'import json; print(json.load(open(".out/check.json"))["standalone_rh_nodes"])'
+{ printf '%s\n' '```lean'; cat .out/entry.lean; printf '%s\n' '```'; } > .out/issue.md
+```
+
+3. If the result still beats the record, submit it with GitHub CLI or paste `.out/issue.md` into a new issue titled `[entry] riemannHypothesis`. The entire body must be one Lean fence. GitHub Actions judges the original issue body. Read the bot’s verdict on that issue for credited points and the run link. With GitHub CLI, use `gh issue view ISSUE_URL --comments`. Open a fresh issue for a revision.
+
+```sh
+gh issue create --repo nikete/rh_golf --title '[entry] riemannHypothesis' --body-file .out/issue.md
+```
+
+For a custom Lean proof, use `[entry] FULL.DECLARATION.NAME` and put the complete `Entry.answer` source inside the fence. This route uses the pinned Lean environment described below. [Worked example and CI verdict](https://github.com/nikete/rh_golf/issues/8)
 
 ## Enter
 
@@ -20,7 +62,7 @@ theorem Entry.answer : Golf.Reflection := by
   sorry
 ```
 
-The full proof that set the local record in entry #6 is available to copy or improve. A direct proof can instead target `[entry] riemannHypothesis` with `theorem Entry.answer : RiemannHypothesis := …`. To find other targets, follow the proof terms from `riemannHypothesis` to `rhOfAll`, `allChi`, or deeper in the pinned source. [Entry #6](https://github.com/nikete/rh_golf/issues/6) · [Archive root](https://github.com/Deicyde/riemann-hypothesis/blob/40e56bab026552e089d7afcfeff08d2defb9c005/src/Main.lean) · [Dependency walkthrough](https://nikete.github.io/rh_golf/proof.html)
+Entry #6 is a complete reflection proof you can copy and improve. A direct proof can instead target `[entry] riemannHypothesis` with `theorem Entry.answer : RiemannHypothesis := …`. To find other targets, follow the proof terms from `riemannHypothesis` to `rhOfAll`, `allChi`, or deeper in the pinned source. [Entry #6](https://github.com/nikete/rh_golf/issues/6) · [Archive root](https://github.com/Deicyde/riemann-hypothesis/blob/40e56bab026552e089d7afcfeff08d2defb9c005/src/Main.lean) · [Dependency walkthrough](https://nikete.github.io/rh_golf/proof.html)
 
 The judge locates the declaration’s defining module in the pinned source. If the name is ambiguous or generated, put a module hint before the Lean source, after any `-- combine:` line. For example, use `-- archive-module: Formalism.GammaFactorNonvanishing.RhOfRight`. A module is the file path under `src/` with dots in place of slashes and the `.lean` suffix removed. The kernel checks the named declaration’s actual interface. A replacement may use archive dependencies available in its environment. The dependency check rejects paths back to the declaration it replaces. The fast paths for `Formalism.VW.rh_of_right` and `riemannHypothesis` use the course environment by default. Include the explicit module hint if the replacement uses the original module’s archive imports.
 
@@ -69,9 +111,9 @@ Local records count distinct expressions across the answer’s type, proof and a
 1. An `issues.opened` workflow on the trusted default branch reads the event file as data. Entrants submit declarations, never workflows, scores or checkout instructions.
 2. An unprivileged Docker process with a read-only course, no network or credentials, 2 CPUs, 6 GiB RAM, and a temporary writable filesystem elaborates the source. A trusted extractor emits a data-only certificate. The host gives the certificate to a separate verifier.
 3. The verifier starts from the pinned environment for the target, reconstructs expressions, and asks Lean’s kernel to check each theorem, safe definition and proved opaque helper. A final theorem with the locked target type uses the submitted `Entry.answer`. The transitive axiom allowlist is `propext`, `Classical.choice` and `Quot.sound`. The verifier computes both the local node count and the integrated declaration weights. The publisher receives the submitted source as text and the verifier’s receipt.
-4. A fresh job validates accepted receipts and records the original submission on `golf-scores` with fast-forward-only retries. A serialized Pages workflow renders the latest complete ledger to static HTML and JSON. Public entry runs cannot overwrite another entrant’s score. The site uses no runtime API, database, token, JavaScript or external judge. Re-running a completed entry is idempotent.
+4. A fresh job validates accepted receipts and records the original submission on `golf-scores` with fast-forward-only retries. A serialized Pages workflow renders the latest complete ledger to static HTML and JSON. Public entry runs cannot overwrite another entrant’s score. The site serves static files. An optional script copies the agent prompt to the clipboard. Re-running a completed entry is idempotent.
 
-Limits per entry are 48 KiB of source, 8 MiB of certificate, 100,000 encoded expression nodes, 1,000 declarations, six minutes for elaboration and four for replay. New inductive families are outside the certificate format for season 1. Existing core/course inductives are supported. A compact unconditional solution is eligible under the same limits as other submissions. GitHub account identity does not guarantee one unique person. Equal local sizes share a local rank.
+A portfolio manifest may contain up to 1,260,000 substitutions, 32 MiB compressed and 160 MiB expanded. Custom Lean entry limits are 48 KiB of source, 8 MiB of certificate, 100,000 encoded expression nodes, 1,000 declarations, six minutes for elaboration and four for replay. New inductive families are outside the certificate format for season 1. Existing core/course inductives are supported. A compact unconditional solution is eligible under the same limits as other submissions. GitHub account identity does not guarantee one unique person. Equal local sizes share a local rank.
 
 ## Run and reproduce
 
