@@ -196,6 +196,22 @@ def render(ledger, output):
                         for i, amount in h["credits"].items()]
         changes.append([link(f"{GITHUB}/issues/{h['issue']}", f"#{h['issue']}"),
                         fmt(h["before_nodes"]), fmt(h["after_nodes"]), ", ".join(credit_links)])
+    bounty_rows = []
+    project["bounties"] = []
+    for issue, name, denominator, percent in (
+            (3, "The Critical Cut", 1000, "0.1%"),
+            (4, "The Riemann Razor", 100, "1%"),
+            (5, "The Great Zeta Vanishing", 10, "10%")):
+        required = (project["archive_nodes"] + denominator - 1) // denominator
+        limit = project["archive_nodes"] - required
+        first = next((event for event in project["history"] if event["after_nodes"] <= limit), None)
+        winners = first["entries"] if first else ()
+        project["bounties"].append(dict(name=name, required_saved_nodes=required, winning_issues=winners))
+        status = ", ".join(link(f"{GITHUB}/issues/{i}", "@" + accounts[i]) for i in winners)
+        bounty_rows.append([link(f"{GITHUB}/issues/{issue}", name), percent, fmt(required),
+                            status or f"{fmt(project['current_nodes'] - limit)} nodes to go"])
+    bounties = "<section id='bounties'><h2>Open proof bounties</h2><p>Earn a title for the first complete proof to cross each threshold. Winning partners share the title. All awards are recognition only.</p>" + elem_table(
+        ["Title", "Cut", "Total nodes saved to qualify", "Progress"], bounty_rows, "") + "</section>"
     history_table = ""
     if changes:
         history_table = "<h3>Record improvements</h3>" + elem_table(
@@ -210,7 +226,7 @@ def render(ledger, output):
     <a class='plain' href='rules.html'>Scoring rules →</a></div></div>
     <figure><img src='critical-strip.svg' width='530' height='322' alt='The critical line at real part one half, with the first three positive zeta zero heights marked.'>
     <figcaption>Critical strip <span>ζ(s) = 0</span></figcaption></figure></section>
-    {total_panel}<section id='course'><div class='sectionhead'><h2>The course</h2><a href='proof.html'>How the holes fit together →</a></div><div class='holes'>{"".join(cards)}</div></section>
+    {total_panel}{bounties}<section id='course'><div class='sectionhead'><h2>The course</h2><a href='proof.html'>How the holes fit together →</a></div><div class='holes'>{"".join(cards)}</div></section>
     <section id='standings'><div class='sectionhead'><h2>Leaderboard</h2><span>{len(leaders)} players · {earn} personal bests</span></div>
     {leaderboard}{history_table}</section>""")
     for i, h in enumerate(CONFIG, 1):
