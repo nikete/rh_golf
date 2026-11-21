@@ -1,0 +1,33 @@
+name: Test independent proof verification
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'judge/audit/**'
+      - 'judge/route_audit.py'
+      - '.github/workflows/audit.yml'
+      - '.github/workflows/check-audit.yml'
+permissions:
+  contents: read
+jobs:
+  inert-export:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 55
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          persist-credentials: false
+      - name: Provision pinned checkers
+        run: |
+          echo "AUDIT_TOOLS=$RUNNER_TEMP/rh-checkers" >> "$GITHUB_ENV"
+          bash judge/audit/toolchain.sh "$RUNNER_TEMP/rh-checkers"
+      - name: Authenticate the independently published Mathlib-only challenge
+        run: bash judge/audit/challenge.sh "$RUNNER_TEMP/rh-challenge.ndjson"
+      - name: Check positive proof, wrong statement and invalid proof on inert exports
+        run: bash judge/audit/smoke.sh .out/checker-smoke
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: checker-smoke-results
+          path: .out/checker-smoke

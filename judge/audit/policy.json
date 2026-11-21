@@ -1,0 +1,25 @@
+{
+  "schema": 1,
+  "target": "riemannHypothesis",
+  "statement": "RiemannHypothesis",
+  "challenge_sha256": "22e1398650efdc2d09930785e7ec5abf32e8311f1488d08d6e9def78455e7106",
+  "upstream_challenge_sha256": "bd484ac9886a96f26b1d9a7a59ebd45b7a70d102c015d4f31f9302bbdd6ab2b9",
+  "upstream_challenge_compressed_sha256": "c24ef99dab3556a52c7fb886e03cf22a242f3b96f82ae4cc40539e5d2f678ac6",
+  "upstream_challenge_url": "https://math.mit.edu/~drew/grh/challenge.ndjson.zst",
+  "allowed_axioms": ["propext", "Classical.choice", "Quot.sound"],
+  "required_checks": ["lean_kernel", "nanoda", "con_leche", "comparator", "con_leche_compare"],
+  "check_versions": {
+    "lean_kernel": "leanchecker + leanchecker-paranoid v4.36.0 (611c117bfaf7b7ae1cfcf246ce6fba31e8f509e9)",
+    "nanoda": "nanoda_bin bundled with Lean v4.36.0 (611c117bfaf7b7ae1cfcf246ce6fba31e8f509e9)",
+    "con_leche": "con-leche 5dc36dc15b7bee891a02406b78a8ac816a47baad --verified",
+    "comparator": "lake comparator v4.36.0 (611c117bfaf7b7ae1cfcf246ce6fba31e8f509e9)",
+    "con_leche_compare": "con-leche 5dc36dc15b7bee891a02406b78a8ac816a47baad --verified --compare"
+  },
+  "lean_version": "4.36.0",
+  "lean_commit": "611c117bfaf7b7ae1cfcf246ce6fba31e8f509e9",
+  "con_leche_commit": "5dc36dc15b7bee891a02406b78a8ac816a47baad",
+  "distributions": {
+    "linux": "2b7ab1ed8b92d2e6abfaf41344823b510064dbc9c0260cac73eb496ab2dea6eb",
+    "darwin_aarch64": "49acada8749ad1343eff1224a3d2510ac61ed53363d37b5e738e8c587e7deabd"
+  }
+}
