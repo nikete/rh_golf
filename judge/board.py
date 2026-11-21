@@ -260,7 +260,8 @@ def render(ledger, output):
 
     def accepted_entry(row):
         issue = row["issue"]
-        target = esc(target_names[issue])
+        name = target_names[issue]
+        target = link("riemann.html", name) if name == "riemannHypothesis" else esc(name)
         local_size = fmt(row["nodes"])
         if row.get("verifier") == PORTFOLIO_VERIFIER:
             coverage = row["portfolio_coverage"]

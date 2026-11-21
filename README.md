@@ -48,7 +48,7 @@ Title the issue `[entry] riemannHypothesis`. Put one line inside its Lean fence.
 reuse-file https://raw.githubusercontent.com/OWNER/REPO/40_HEX_COMMIT/PATH.jsonl.gz SHA256
 ```
 
-Pin the URL to the full 40-hex commit and replace `SHA256` with the 64-character lowercase SHA-256 of the gzip file. Before compression, the file is UTF-8 JSON Lines with one `[target, donor]` pair per line. Give each name as a qualified string or an array of exact Lean name components. The judge checks every pair under the exact-reuse rules, checks the joint graph for cycles, and scores the resulting complete RH proof. To build on an entry, download its manifest, edit it and submit the revised file in a new issue. Each portfolio competes as submitted. To combine portfolios, merge their manifests into the file you submit.
+Pin the URL to the full 40-hex commit and replace `SHA256` with the 64-character lowercase SHA-256 of the gzip file. Before compression, the file is UTF-8 JSON Lines with one `[target, donor]` pair per line. Give each name as a qualified string or an array of exact Lean name components. The judge checks every pair under the exact-reuse rules, checks the joint graph for cycles, and scores the resulting complete RH proof. To build on an entry, download its manifest, edit it and submit the revised file in a new issue. Each portfolio competes as submitted. To combine portfolios, merge their manifests into the file you submit. Root records compare portfolios and direct RH proofs by their complete standalone size. [Complete RH records](https://nikete.github.io/rh_golf/riemann.html)
 
 ## Score
 
