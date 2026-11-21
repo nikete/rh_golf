@@ -6,6 +6,9 @@ on:
       - 'judge/baseline/**'
       - 'judge/baseline.json'
       - 'judge/prepare.sh'
+      - 'judge/delta_policy.json'
+      - 'judge/delta_policy.py'
+      - 'judge/delta_checker.py'
       - 'judge/reuse/build.py'
       - 'judge/reuse/index.lock.json'
       - 'judge/reuse/signatures.jsonl.gz'
@@ -66,6 +69,15 @@ jobs:
           if-no-files-found: error
       - name: Reproduce the theorem reuse signatures and dependency footprints
         run: python3 judge/reuse/build.py .out/baseline .out/baseline/signatures.jsonl.gz
+      - name: Check exact signatures, statement footprints, and the complete library boundary
+        run: |
+          python3 judge/baseline/delta_anchor.py .out/baseline judge/reuse/signatures.jsonl.gz > .out/baseline/library-boundary.json
+          cat .out/baseline/library-boundary.json
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: original-rh-library-boundary
+          path: .out/baseline/library-boundary.json
+          if-no-files-found: error
       - name: Verify graph against pinned per-file digests
         run: python3 judge/fetch_graph.py --verify .out/baseline/archive-graph.tar.gz
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4

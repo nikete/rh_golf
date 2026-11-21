@@ -15,7 +15,7 @@ while chunk := sys.stdin.buffer.read(1 << 20):
     sys.stdout.buffer.write(chunk)
 if digest.hexdigest() != expected:
     sys.exit("Wrong SHA-256 for the compressed export")
-' | zstd --long=30 -dc | "$work/index" "$work"
+' | zstd --long=30 -dc | python3 judge/baseline/delta_anchor.py --verify-raw | "$work/index" "$work"
 python3 judge/baseline/catalog.py "$work"
 python3 - "$work" <<'PY'
 import json, subprocess, sys
