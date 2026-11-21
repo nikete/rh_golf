@@ -1,0 +1,77 @@
+{
+  "season": "1",
+  "holes": [
+    {
+      "id": "window-logic",
+      "name": "Good windows",
+      "class": "Warm-up",
+      "symbol": "\u2200",
+      "target": "Golf.WindowLogic",
+      "description": "Use an arbitrarily late good window to contradict the bad windows forced by a hypothetical zero.",
+      "example": "examples/window-logic.lean"
+    },
+    {
+      "id": "reflection",
+      "name": "Reflect a zeta zero",
+      "class": "Classical reduction",
+      "symbol": "\u2194",
+      "target": "Golf.Reflection",
+      "description": "Assume right-half-plane nonvanishing for zeta. Deduce Mathlib\u2019s Riemann hypothesis.",
+      "example": "examples/reflection.lean"
+    },
+    {
+      "id": "prime-window",
+      "name": "The prime-window bound",
+      "class": "Analytic reduction",
+      "symbol": "\u039b",
+      "target": "Golf.PrimeWindow",
+      "description": "Deduce RH from the one-sided bound for the centered prime sum on arbitrarily late power windows."
+    },
+    {
+      "id": "riemann",
+      "name": "The Riemann hypothesis",
+      "class": "Unconditional",
+      "symbol": "\u03b6",
+      "target": "RiemannHypothesis",
+      "description": "Prove Mathlib\u2019s RiemannHypothesis from the pinned library under the hosted-runner limits."
+    }
+  ],
+  "references": {
+    "window-logic": {
+      "status": "accepted",
+      "hole": "window-logic",
+      "season": "1",
+      "axioms": [],
+      "helpers": 0,
+      "nodes": 104,
+      "source_sha256": "c5d64fe4b321a166eea6c2773ae0bf3b8d2f3c1f9d3db9e95bdc0c3f10780540",
+      "certificate_sha256": "aece17416aa002ee0ff7d2a3d0fc8f687a6098a3dff51666666c32c9ee735406"
+    },
+    "reflection": {
+      "status": "accepted",
+      "hole": "reflection",
+      "season": "1",
+      "nodes": 2297,
+      "helpers": 0,
+      "axioms": [
+        "propext",
+        "Classical.choice",
+        "Quot.sound"
+      ],
+      "source_sha256": "826c6530e21477dd70fcff0a5531eb79ef10a75f441d8683c81e2a8aa3513d53",
+      "certificate_sha256": "5437c7c42f9632fd6b5291bc24ccbe2192e96d76572d0fdb74a18e51146f832d"
+    }
+  },
+  "records": {
+    "window-logic": 104,
+    "reflection": 2297
+  },
+  "players": [],
+  "personal_bests": {
+    "window-logic": [],
+    "reflection": [],
+    "prime-window": [],
+    "riemann": []
+  },
+  "accepted": []
+}

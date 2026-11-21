@@ -1,6 +1,0 @@
-[
-  {"id":"window-logic","name":"Good windows","class":"Warm-up","symbol":"∀","target":"Golf.WindowLogic","description":"Use an arbitrarily late good window to contradict the bad windows forced by a hypothetical zero.","example":"examples/window-logic.lean"},
-  {"id":"reflection","name":"Reflect a zeta zero","class":"Classical reduction","symbol":"↔","target":"Golf.Reflection","description":"Assume right-half-plane nonvanishing for zeta. Deduce Mathlib’s Riemann hypothesis.","example":"examples/reflection.lean"},
-  {"id":"prime-window","name":"The prime-window bound","class":"Analytic reduction","symbol":"Λ","target":"Golf.PrimeWindow","description":"Deduce RH from the one-sided bound for the centered prime sum on arbitrarily late power windows."},
-  {"id":"riemann","name":"The Riemann hypothesis","class":"Unconditional","symbol":"ζ","target":"RiemannHypothesis","description":"Prove Mathlib’s RiemannHypothesis from the pinned library under the hosted-runner limits."}
-]
