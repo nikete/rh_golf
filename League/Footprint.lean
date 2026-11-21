@@ -30,7 +30,15 @@ private partial def scan (e : Expr) (p : Part) : Part := Id.run do
   | .app f a | .lam _ f a _ | .forallE _ f a _ => return scan a (scan f p)
   | .letE _ t v b _ => return scan b (scan v (scan t p))
   | .proj n _ a => return scan a {p with names := p.names.insert n}
+  | .mdata _ a => return scan a p
   | _ => return p
+
+/-- Every referenced constant or projection type in a declaration's type and body. -/
+def usedNames (ci : ConstantInfo) : NameSet :=
+  let part := scan ci.type {}
+  match ci.value? true with
+  | some body => (scan body part).names
+  | none => part.names
 
 private def courseConstant (env : Environment) (n : Name) : Bool := Id.run do
   let some i := env.getModuleIdxFor? n | return false

@@ -23,7 +23,7 @@ class Route:
     entries: tuple = ()
 
 
-def score_project(rows, refs, baseline):
+def score_project(rows, refs, baseline, graph=None):
     archive = baseline["archive_nodes"]
     spine = baseline["spine_nodes"]
     if not 0 < spine < archive:
@@ -43,24 +43,39 @@ def score_project(rows, refs, baseline):
     if reference_size < start.nodes:
         start = Route("course-reflection", reference_size)
 
+    archive_record = None
+    if graph is not None:
+        from archive_portfolio import ArchiveRecord
+        archive_record = ArchiveRecord(graph, reference, baseline)
     winner = start
     history = []
     credit = defaultdict(int)
     pending = []
+    bundle_warnings = {}
     halves = {"prime-window": {}, "prime-supply": {}}
     for row in sorted(rows, key=lambda r: r["issue"]):
         issue, hole = row["issue"], row["hole"]
         measurement = row.get("impact")
-        if hole == "window-logic":
+        kind = {"Formalism.VW.rh_of_right": "reflection", "riemannHypothesis": "riemann"}.get(hole, hole)
+        if kind == "window-logic":
             continue
         if measurement is None:
             pending.append(issue)
             continue
         check(measurement)
         size = footprint_size(measurement)
-        if hole == "reflection":
+        if archive_record is not None and ("archive_deps" in row or kind in ("reflection", "riemann")):
+            target = {"reflection": "Formalism.VW.rh_of_right", "riemann": "riemannHypothesis"}.get(hole, hole)
+            record = archive_record.consider(row, target)
+            if archive_record.last_bundle_warning:
+                bundle_warnings[issue] = archive_record.last_bundle_warning
+            if record is None:
+                continue
+            size, entries, _ = record
+            candidate = Route("archive-replacement", size, entries)
+        elif kind == "reflection":
             candidate = Route("archive-reflection", spine + size, (issue,))
-        elif hole == "riemann":
+        elif kind == "riemann":
             candidate = Route("direct", size, (issue,))
         elif hole in halves:
             # For the same set of shared course declarations, the cheapest private
@@ -89,7 +104,10 @@ def score_project(rows, refs, baseline):
         gain = winner.nodes - candidate.nodes
         # On an initial two-part shortcut the contributors split the gain. When
         # a winning pair keeps its partner only the newly used entry earns credit.
-        beneficiaries = [i for i in candidate.entries if i not in winner.entries]
+        beneficiaries = ([i for i in candidate.entries if i not in winner.entries]
+                         if candidate.kind in ("prime-pair", "archive-replacement") else [issue])
+        if not beneficiaries:
+            beneficiaries = list(candidate.entries) or [issue]
         quotient, remainder = divmod(gain, len(beneficiaries))
         awards = {i: quotient + int(k < remainder) for k, i in enumerate(beneficiaries)}
         for i, award in awards.items():
@@ -106,8 +124,8 @@ def score_project(rows, refs, baseline):
         "archive_nodes": archive, "starting_nodes": start.nodes, "current_nodes": winner.nodes,
         "saved_nodes": archive - winner.nodes, "course_saved_nodes": archive - start.nodes,
         "community_saved_nodes": community,
-        "reflection_headroom_nodes": max(0, winner.nodes - spine),
-        "winning_route": winner.kind,
+        "reflection_headroom_nodes": max(0, winner.nodes - spine) if archive_record is None else None,
+        "winning_route": winner.kind, "bundle_warnings": bundle_warnings,
         "winning_issues": winner.entries, "history": history, "pending_issues": pending,
     }, dict(credit)
 

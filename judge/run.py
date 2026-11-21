@@ -20,8 +20,13 @@ MAX_SOURCE = 48 * 1024
 MAX_CERT = 8 * 1024 * 1024
 MAX_NODES = 100_000
 SANDBOX_IMAGE = (ROOT / "judge/image.txt").read_text().strip()
-ISSUE_TITLE = re.compile(r"^\[entry\]\s+([a-z-]+)(?:\s+.*)?$", re.I)
+FAST_NAMES = {"riemannHypothesis": "riemann", "Formalism.VW.rh_of_right": "reflection"}
+ISSUE_TITLE = re.compile(r"^\[entry\]\s+(?:`([^`]+)`|([^\s`]+))(?:\s+.*)?$", re.I)
+
+def valid_target(name):
+    return isinstance(name, str) and 0 < len(name) <= 1024 and name.isprintable()
 SOURCE_BLOCK = re.compile(r"\A(?:### Lean source\s+)?```(?:lean4?|Lean)?[ \t]*\n(.*?)\n```\s*\Z", re.S)
+REUSE = re.compile(r"reuse[ \t]+([^\r\n]+)\n")
 LOGIN = re.compile(r"[A-Za-z0-9][A-Za-z0-9-]{0,38}\Z")
 SEASON = "1"
 
@@ -39,15 +44,15 @@ def event_submission(event):
     issue = event["issue"]
     # Issue author is the GitHub-authenticated entrant. The event snapshot is immutable.
     match = ISSUE_TITLE.fullmatch(issue["title"].strip())
-    if not match or match[1] not in TARGETS:
-        raise Rejected("Use an entry template and a course hole ID.")
+    if not match or not valid_target(match[1] or match[2]):
+        raise Rejected("Name the archive declaration in the issue title, e.g. [entry] Formalism.VW.rh_of_right.")
     block = SOURCE_BLOCK.fullmatch((issue.get("body") or "").replace("\r\n", "\n").strip())
     if not block:
         raise Rejected("Put the declarations inside one fenced lean code block.")
     account = issue["user"]["login"]
     if not LOGIN.fullmatch(account):
         raise Rejected("Unsupported GitHub account name.")
-    return match[1], validate_source(block[1]), account
+    return match[1] or match[2], validate_source(block[1]), account
 
 
 def clean_env():
@@ -77,14 +82,18 @@ def process(argv, env, cwd, stdout, stderr, timeout):
         raise Rejected(f"Checker process exited with status {proc.returncode}.")
 
 
-def elaborate(src, env, toolchain, work, trusted_example):
-    (work / "Entry.lean").write_text("import League.Course\n" + src)
+def elaborate(src, env, toolchain, work, trusted_example, module=None):
+    # module comes from the validated pinned archive preparation step.
+    imports = "import League.Course\n"
+    if module:
+        imports += "".join(f"import {name}\n" for name in module.split(","))
+    (work / "Entry.lean").write_text(imports + src)
     # The only bytes crossing the public-submission boundary are bounded JSON on stdout.
     if trusted_example:
         subprocess.run(["lean", "-o", "Entry.olean", "Entry.lean"], cwd=work, env=env,
                        check=True, timeout=240, stdout=sys.stderr, stderr=sys.stderr)
         inside = {**env, "LEAN_PATH": str(work) + ":" + env["LEAN_PATH"]}
-        subprocess.run(["lean", "--run", str(ROOT / "judge/Extract.lean"), str(work / "proof.json")],
+        subprocess.run(["lean", "--run", str(ROOT / "judge/Extract.lean"), str(work / "proof.json"), *([module] if module else [])],
                        cwd=work, env=inside, check=True, timeout=180, stdout=sys.stderr)
     else:
         # No token, network, host workspace, docker socket, runner commands or shared writable mounts.
@@ -109,7 +118,8 @@ def elaborate(src, env, toolchain, work, trusted_example):
                 "-e", f"LEAN_PATH=/tmp:{search}", "-w", "/tmp", SANDBOX_IMAGE, "sh", "-ec",
                 "cp /input/Entry.lean Entry.lean; "
                 "/opt/lean/bin/lean -o Entry.olean Entry.lean >&2; "
-                "/opt/lean/bin/lean --run /Extract.lean /tmp/proof.json >&2; cat /tmp/proof.json"]
+                '/opt/lean/bin/lean --run /Extract.lean /tmp/proof.json "$@" >&2; cat /tmp/proof.json',
+                "extract", *([module] if module else [])]
         # Download the standard userspace before the networkless container is started.
         subprocess.run(["docker", "image", "inspect", SANDBOX_IMAGE], check=True,
                        stdout=subprocess.DEVNULL, timeout=20)
@@ -127,28 +137,97 @@ def elaborate(src, env, toolchain, work, trusted_example):
     return cert
 
 
+def open_graph():
+    from archive_graph import ArchiveGraph
+    path = ROOT / ".out/archive-graph"
+    subprocess.run([sys.executable, str(ROOT / "judge/fetch_graph.py")], cwd=ROOT, check=True)
+    return ArchiveGraph(path)
+
+
+def directives(src):
+    """Return the optional portfolio and the source passed to the verifier."""
+    lines = src.splitlines(keepends=True)
+    portfolio = []
+    kept = []
+    header = True
+    for line in lines:
+        stripped = line.strip()
+        if header and stripped.startswith("-- combine:"):
+            terms = stripped.removeprefix("-- combine:").split()
+            if portfolio or not terms or any(not re.fullmatch(r"#[1-9][0-9]{0,14}", term) for term in terms):
+                raise Rejected("Use one -- combine: #12 #34 header with earlier entry numbers.")
+            portfolio = [int(term[1:]) for term in terms]
+            if len(set(portfolio)) != len(portfolio):
+                raise Rejected("Name each nominated issue once.")
+        else:
+            kept.append(line)
+            if stripped and not stripped.startswith("--"):
+                header = False
+    return portfolio, "".join(kept)
+
+
 def judge(hole, text, trusted_example=False):
-    src = validate_source(text)
-    env, tc = clean_env()
+    original = validate_source(text)
+    portfolio, src = directives(original)
+    fast = FAST_NAMES.get(hole, hole)
+    module = None
+    reuse = REUSE.fullmatch(src)
+    if reuse or fast not in TARGETS or (hole in FAST_NAMES and
+            src.lstrip().startswith(("-- archive-module:", "-- archive-import:"))):
+        from archive_target import prepare_archive, ArchiveTargetError
+        graph = open_graph()
+        try:
+            target_id = graph.target(hole)
+        except (KeyError, ValueError) as exc:
+            raise Rejected(str(exc)) from exc
+        if reuse:
+            from reuse import verify_reuse
+            try:
+                score = verify_reuse(hole, reuse[1].strip(), graph, original)
+            except (KeyError, ValueError) as exc:
+                raise Rejected(str(exc)) from exc
+            validate_score(score)
+            validate_impact(score["impact"])
+            return {**score, **({"combine": portfolio} if portfolio else {})}
+        env, tc = clean_env()
+        try:
+            module, dirs = prepare_archive(hole, src, env)
+        except ArchiveTargetError as exc:
+            raise Rejected(str(exc)) from exc
+        env = {**env, "LEAN_PATH": ":".join([*map(str, dirs), env["LEAN_PATH"]])}
+    else:
+        env, tc = clean_env()
     with tempfile.TemporaryDirectory() as dirname:
         work = Path(dirname)
         # The kernel only reads the certificate and the course; no candidate .olean is on its path.
-        cert = elaborate(src, env, tc, work, trusted_example)
+        cert = elaborate(src, env, tc, work, trusted_example, module)
+        replay_args = ["archive", module, json.dumps(graph.name_parts(hole), ensure_ascii=False)] if module else [TARGETS[fast]]
         with (work / "result").open("wb") as out, (work / "err").open("wb") as err:
             try:
-                process(["lean", "--run", str(ROOT / "judge/Replay.lean"), TARGETS[hole], str(cert)],
+                process(["lean", "--run", str(ROOT / "judge/Replay.lean"), *replay_args, str(cert)],
                         env, ROOT, out, err, 240)
             except Rejected as exc:
                 raise Rejected(str(exc) + " " + (work / "err").read_bytes()[:500].decode(errors="replace")) from exc
         score = json.loads((work / "result").read_text())
         validate_score(score)
         validate_impact(score["impact"])
-        return {**score, "source_sha256": hashlib.sha256(src.encode()).hexdigest(),
+        if module:
+            from archive_portfolio import replacement_for
+            try:
+                # Validate a standalone patch before it can enter the immutable ledger.
+                replacement = replacement_for(graph, score)
+                score["standalone_rh_nodes"], _ = graph.measure({target_id: replacement})
+            except (ValueError, KeyError) as exc:
+                raise Rejected(f"Invalid archive dependency: {exc}") from exc
+            score["archive_module"] = module
+        return {**score, **({"combine": portfolio} if portfolio else {}),
+                "source_sha256": hashlib.sha256(original.encode()).hexdigest(),
                 "certificate_sha256": hashlib.sha256(cert.read_bytes()).hexdigest()}
 
 
 def validate_score(score):
-    if (type(score["nodes"]) is not int or not 1 <= score["nodes"] <= MAX_NODES
+    if (type(score["nodes"]) is not int or score["nodes"] < 1
+            or (score["nodes"] > MAX_NODES and score.get("verifier") != "pinned-export-exact-reuse-v1")
             or type(score["helpers"]) is not int or not 0 <= score["helpers"] <= 1000
             or not isinstance(score["axioms"], list) or not set(score["axioms"]) <= ALLOWED_AXIOMS):
         raise ValueError("Malformed replay result")
@@ -157,11 +236,25 @@ def validate_score(score):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--event", type=Path)
-    parser.add_argument("--hole", choices=TARGETS)
+    parser.add_argument("--target", "--hole", dest="hole")
     parser.add_argument("--source", type=Path)
-    parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--preflight", action="store_true", help="Report whether this issue needs a Lean runner")
+    parser.add_argument("--output", type=Path)
     parser.add_argument("--reference", action="store_true", help="Only for checked-in maintainer examples")
     args = parser.parse_args()
+    if args.preflight:
+        if not args.event:
+            parser.error("--preflight needs --event")
+        try:
+            _, src, _ = event_submission(json.loads(args.event.read_text()))
+            _, body = directives(src)
+            needs_lean = REUSE.fullmatch(body) is None
+        except Rejected:
+            needs_lean = False
+        print("needs_lean=" + str(needs_lean).lower())
+        return
+    if not args.output:
+        parser.error("--output is required")
     result = None
     try:
         if args.event:
@@ -170,7 +263,7 @@ def main():
             hole, src, author = event_submission(json.loads(args.event.read_text()))
         else:
             if not args.source or not args.hole:
-                parser.error("--hole and --source are required for a local entry")
+                parser.error("--target and --source are required for a local entry")
             hole, src, author = args.hole, args.source.read_text(), "Course reference"
             if args.reference:
                 path = next((h.get("example") for h in CONFIG if h["id"] == hole), None)
@@ -179,13 +272,17 @@ def main():
         result = {"status": "accepted", "hole": hole, "season": SEASON, **judge(hole, src, args.reference)}
     except Rejected as exc:
         result = {"status": "rejected", "reason": " ".join(str(exc).split())[-1000:]}
+    except (RuntimeError, subprocess.SubprocessError, OSError) as exc:
+        if not args.event:
+            raise
+        result = {"status": "unverified", "reason": " ".join(str(exc).split())[-1000:]}
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(result, indent=2) + "\n")
     if result["status"] == "accepted":
         print(f"accepted {result['nodes']} nodes")
     else:
         # Keep diagnostics on one JSON-escaped line, including arbitrary compiler text.
-        print("rejected " + json.dumps(result["reason"], ensure_ascii=True))
+        print(result["status"] + " " + json.dumps(result["reason"], ensure_ascii=True))
     if result["status"] != "accepted" and not args.event:
         raise SystemExit(1)
 

@@ -5,6 +5,7 @@ on:
     paths:
       - 'judge/baseline/**'
       - 'judge/baseline.json'
+      - 'judge/reuse/**'
       - 'judge/archive_graph.lock.json'
       - 'judge/fetch_graph.py'
       - 'lean-toolchain'
@@ -58,6 +59,8 @@ jobs:
           name: ordinary-rh-footprint
           path: .out/baseline/result.json
           if-no-files-found: error
+      - name: Reproduce the theorem reuse signatures and dependency footprints
+        run: python3 judge/reuse/build.py .out/baseline .out/baseline/signatures.jsonl.gz
       - name: Verify graph against pinned per-file digests
         run: python3 judge/fetch_graph.py --verify .out/baseline/archive-graph.tar.gz
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4

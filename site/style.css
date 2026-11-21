@@ -16,3 +16,8 @@
 .footprints strong { font: 600 clamp(20px, 3.3vw, 38px) var(--mono); letter-spacing: -.06em; }
 #progress { margin-bottom: 32px; }
 #progress p { color: var(--muted); }
+
+.submit-target, #entries { margin-top: 2.5rem; }
+.submit-target { margin-bottom: 2.5rem; }
+.submit-target p { max-width: 72ch; }
+.submit-target pre { padding: 1rem; overflow-x: auto; background: #e6edda; border-left: 3px solid #739b44; }

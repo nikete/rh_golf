@@ -1,5 +1,5 @@
-// Traverse succinct expression blocks. Loading the blocks sequentially avoids
-// random disk reads during repeated declaration-local graph walks.
+// Traverse file-backed expression blocks. The OS can reclaim clean pages on
+// memory-limited runners while densely accessed blocks stay cached.
 #include "blocks.hpp"
 #include <algorithm>
 #include <array>
@@ -25,12 +25,12 @@ using Triple = std::array<Word, 3>;
 template<class T> struct File {
   std::size_t size;
   const T* data;
-  explicit File(const std::string& path) {
+  explicit File(const std::string& path, bool prefetch = false) {
     int fd = open(path.c_str(), O_RDONLY);
     struct stat st{};
     if (fd < 0 || fstat(fd, &st) < 0 || st.st_size % sizeof(T)) throw std::runtime_error(path);
     size = st.st_size / sizeof(T);
-    data = size ? static_cast<const T*>(mmap(nullptr, st.st_size, PROT_READ, MAP_PRIVATE, fd, 0)) : nullptr;
+    data = size ? static_cast<const T*>(mmap(nullptr, st.st_size, PROT_READ, MAP_PRIVATE | (prefetch ? MAP_POPULATE : 0), fd, 0)) : nullptr;
     close(fd);
     if (data == MAP_FAILED) throw std::runtime_error("mmap " + path);
   }
@@ -41,29 +41,17 @@ template<class T> struct File {
   }
 };
 
-template<class T> std::vector<T> load(const std::string& path) {
-  std::ifstream f(path, std::ios::binary | std::ios::ate);
-  f.exceptions(std::ios::badbit | std::ios::failbit);
-  auto bytes = static_cast<std::size_t>(f.tellg());
-  if (bytes % sizeof(T)) throw std::runtime_error("truncated " + path);
-  std::vector<T> items(bytes / sizeof(T));
-  f.seekg(0);
-  f.read(reinterpret_cast<char*>(items.data()), bytes);
-  return items;
-}
-
 struct Expressions {
-  std::vector<blocks::ShortPair> edges;
-  std::vector<Word> offsets, values;
-  explicit Expressions(const std::string& dir):
-    edges(load<blocks::ShortPair>(dir + "/edges.bin")), offsets(load<Word>(dir + "/offsets.bin")),
-    values(load<Word>(dir + "/values.bin")) {}
+  File<blocks::ShortPair> edges;
+  File<Word> offsets, values;
+  explicit Expressions(const std::string& dir, bool prefetch):
+    edges(dir + "/edges.bin", prefetch), offsets(dir + "/offsets.bin", prefetch), values(dir + "/values.bin", prefetch) {}
   Pair operator[](Word e) const {
     Word block = e / blocks::width;
     auto decode = [&](std::uint16_t v) -> Word {
-      return v < blocks::width ? block * blocks::width + v : values.at(offsets.at(block) + v - blocks::width);
+      return v < blocks::width ? block * blocks::width + v : values[offsets[block] + v - blocks::width];
     };
-    const auto& pair = edges.at(e);
+    const auto& pair = edges[e];
     return {decode(pair[0]), decode(pair[1])};
   }
 };
@@ -81,8 +69,9 @@ struct Graph {
   std::vector<Group> groups{1};
   std::vector<std::uint64_t> marked;
   std::vector<Word> touched, stack;
-  explicit Graph(const std::string& dir):
-    expr(dir), lets(dir + "/let.bin"), owner(dir + "/owner.bin"), marked((expr.edges.size() + 63) / 64) {
+  explicit Graph(const std::string& dir, bool load_groups = true):
+    expr(dir, load_groups), lets(dir + "/let.bin"), owner(dir + "/owner.bin"), marked((expr.edges.size + 63) / 64) {
+    if (!load_groups) return;
     File<Word> records(dir + "/groups.bin");
     for (std::size_t pos = 0; pos < records.size;) {
       Word n = records[pos++];
@@ -178,6 +167,24 @@ struct Graph {
 };
 
 int main(int argc, char** argv) {
+  // Independent statement measurements for exact theorem reuse. Group zero
+  // is scratch and has no owner, so all archive constants are reported.
+  if (argc == 3 && std::string_view(argv[2]) == "--theorem-statements") {
+    Graph graph(argv[1], false);
+    Word root;
+    auto& scratch = graph.groups.at(0);
+    while (std::cin >> root) {
+      scratch.roots = {root};
+      scratch.dependencies.clear();
+      scratch.measured = false;
+      graph.measure_group(0);
+      std::cout << root << ' ' << scratch.weight;
+      for (auto dep : scratch.dependencies) std::cout << ' ' << dep;
+      std::cout << '\n';
+    }
+    if (!std::cin.eof()) throw std::runtime_error("malformed expression ID list");
+    return 0;
+  }
   if (argc != 7) return 2;
   Graph graph(argv[1]);
   Word root = std::stoul(argv[2]), cut = std::stoul(argv[3]);

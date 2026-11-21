@@ -68,13 +68,102 @@ def install (base : Environment) (cert : Certificate) (rename : Name → Name)
     added := added.insert n
   return (env, added)
 
+private def nameParts : Name → List Json → List Json
+  | .anonymous, acc => acc
+  | .str p s, acc => nameParts p (.str s :: acc)
+  | .num p i, acc => nameParts p (toJson i :: acc)
+
+private def archiveRoots : List Name :=
+  [`BuildAid, `CompanionTheory, `Development, `Formalism, `GroundTheory, `Lemmata,
+   `Main, `PositivityTheory, `ReciprocityTheory, `Statements, `Supplements]
+
+private def moduleOf (env : Environment) (n : Name) : Option Name := do
+  let idx ← env.getModuleIdxFor? n
+  return env.header.modules[idx.toNat]!.module
+
+private def archiveName (target : String) : IO Name := do
+  if !target.startsWith "[" then return target.toName
+  let parts ← IO.ofExcept (Json.parse target >>= (·.getArr?))
+  let mut name := Name.anonymous
+  for part in parts do
+    if let .str s := part then name := .str name s
+    else name := .num name (← IO.ofExcept part.getNat?)
+  return name
+
+/-- Only examine the new part of the graph. Publication checks all boundary edges
+against the checksum-bound archive graph, including paths back to the replaced body. -/
+private partial def boundary (env : Environment) (added : NameSet) (pending : List Name)
+    (seen deps : NameSet) : IO NameSet := do
+  match pending with
+  | [] => return deps
+  | head :: tail =>
+    if seen.contains head then return ← boundary env added tail seen deps
+    let seen := seen.insert head
+    let mod := moduleOf env head
+    if added.contains head || mod.any (`League).isPrefixOf then
+      let some ci := env.find? head | throw <| IO.userError s!"missing linked declaration {head}"
+      return ← boundary env added ((Golf.Footprint.usedNames ci).toList ++ tail) seen deps
+    if mod.any (fun m => archiveRoots.any (·.isPrefixOf m)) then
+      return ← boundary env added tail seen (deps.insert head)
+    return ← boundary env added tail seen deps
+
+private def archiveScore (cert : Certificate) (moduleNames targetText : String) : IO Unit := do
+  let target ← archiveName targetText
+  let modules := (moduleNames.splitOn ",").map String.toName
+  let some moduleName := modules.head? | throw <| IO.userError "missing archive module"
+  let imports := #[{module := `League.Course : Import}] ++ (modules.map (fun n => {module := n : Import})).toArray
+  let base ← importModules imports {}
+  let some old := base.find? target | throw <| IO.userError "named archive declaration does not exist"
+  unless moduleOf base target == some moduleName && archiveRoots.any (·.isPrefixOf moduleName) do
+    throw <| IO.userError "declaration is outside the selected archive module"
+  let isTheorem := match old with | .thmInfo _ => true | _ => false
+  unless isTheorem || (match old with | .defnInfo v => v.safety == .safe
+                                      | .opaqueInfo v => !v.isUnsafe | _ => false) do
+    throw <| IO.userError "declaration has no independently replaceable safe body"
+  let (original, added) ← install base cert id
+  let some entry := original.find? `Entry.answer | throw <| IO.userError "missing Entry.answer"
+  if entry.levelParams.length != old.levelParams.length then
+    throw <| IO.userError "wrong number of universe parameters"
+  let levels := entry.levelParams.map Level.param
+  let expected := old.type.instantiateLevelParams old.levelParams levels
+  unless Kernel.isDefEqGuarded original {} expected entry.type do
+    throw <| IO.userError "wrong archive target type"
+  let some value := entry.value? true | throw <| IO.userError "missing replacement body"
+  if !isTheorem then
+    let some orig := old.value? true | throw <| IO.userError "missing original body"
+    unless Kernel.isDefEqGuarded original {} (orig.instantiateLevelParams old.levelParams levels) value do
+      throw <| IO.userError "replacement definition changes computation"
+  let root := `RHGolfImpact ++ target ++ `answer
+  let rename := fun n => if n == `Entry.answer then root
+                         else if added.contains n then `RHGolfImpact ++ target ++ `helpers ++ n else n
+  let (linked, fresh) ← install base cert rename (some expected)
+  let checkAxioms := fun (env : Environment) (n : Name) => do
+    let axs ← Core.CoreM.toIO' (Lean.collectAxioms n)
+      {fileName := "<archive judge>", fileMap := default} {env}
+    unless axs.all ([`propext, `Classical.choice, `Quot.sound].contains ·) do
+      throw <| IO.userError s!"disallowed axiom: {axs}"
+    pure axs
+  let axioms ← checkAxioms linked root
+  if expected != entry.type then discard <| checkAxioms original `Entry.answer
+  let footprint ← IO.ofExcept (Golf.Footprint.measure linked fresh root)
+  let deps ← boundary linked fresh [root] {} {}
+  if deps.contains target then throw <| IO.userError "replacement directly depends on its original"
+  let seen := ((do visit original added entry.type; visit original added value).run {}).2
+  IO.println (Json.mkObj [("nodes", toJson seen.exprs.size), ("helpers", toJson seen.helpers.size),
+    ("axioms", toJson axioms), ("impact", footprint),
+    ("archive_deps", toJson (deps.toList.map (fun n => nameParts n [])))]).compress
+
 def main (args : List String) : IO Unit := do
-  let [target, file] := args | throw <| IO.userError "expected trusted target and certificate"
+  let (target, file, archiveModule) ← match args with
+    | [t, f] => pure (t, f, none)
+    | ["archive", m, t, f] => pure (t, f, some m)
+    | _ => throw <| IO.userError "expected trusted target and certificate"
   initSearchPath (← findSysroot)
   let data ← IO.FS.readFile file
   if data.utf8ByteSize > 8 * 1024 * 1024 then throw <| IO.userError "certificate exceeds 8 MiB"
   let cert : Certificate ← IO.ofExcept <| Json.parse data >>= fromJson?
   if cert.nodes.size > 100000 || cert.items.size > 1000 then throw <| IO.userError "certificate limit"
+  if let some m := archiveModule then return ← archiveScore cert m target
   let base ← importModules #[{module := `League.Course}] {}
   let (env, added) ← install base cert id
   let some (.thmInfo answer) := env.find? `Entry.answer | throw <| IO.userError "missing theorem Entry.answer"

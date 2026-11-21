@@ -10,7 +10,7 @@ import re
 import shutil
 from urllib.parse import urlencode
 
-from run import CONFIG, TARGETS, SEASON, ROOT, LOGIN, validate_score, event_submission
+from run import CONFIG, TARGETS, SEASON, ROOT, LOGIN, validate_score, event_submission, valid_target, open_graph
 
 REPO_RE = re.compile(r"[a-zA-Z0-9-]+/[a-zA-Z0-9._-]+\Z")
 HEX = re.compile(r"[0-9a-f]{64}\Z")
@@ -20,26 +20,30 @@ if not REPO_RE.fullmatch(REPO):
 GITHUB = "https://github.com/" + REPO
 
 
+def target_key(hole):
+    return {"Formalism.VW.rh_of_right": "reflection", "riemannHypothesis": "riemann"}.get(hole, hole)
+
+
 def chosen(rows):
     """One personal best per hole. Earlier issue breaks a personal tie without changing points."""
     best = {}
     for row in rows:
-        key = (row["author"].lower(), row["hole"])
+        key = (row["author"].lower(), target_key(row["hole"]))
         if key not in best or (row["nodes"], row["issue"]) < (best[key]["nodes"], best[key]["issue"]):
             best[key] = row
     return list(best.values())
 
 
-def standings(rows, refs, baseline):
-    project, credits = score_project(rows, refs, baseline)
+def standings(rows, refs, baseline, graph=None):
+    project, credits = score_project(rows, refs, baseline, graph)
     pars = {hole: r["nodes"] for hole, r in refs.items()}
     hole_credits = defaultdict(int)
     for row in rows:
-        hole_credits[row["author"].lower(), row["hole"]] += credits.get(row["issue"], 0)
+        hole_credits[row["author"].lower(), target_key(row["hole"])] += credits.get(row["issue"], 0)
     players = {}
     holes = defaultdict(list)
     for r in sorted(chosen(rows), key=lambda x: (x["nodes"], x["issue"])):
-        hole, who = r["hole"], r["author"].lower()
+        hole, who = target_key(r["hole"]), r["author"].lower()
         pars[hole] = min(pars.get(hole, r["nodes"]), r["nodes"])
         points = hole_credits[who, hole]
         holes[hole].append(dict(r, points=points, entry_points=credits.get(r["issue"], 0)))
@@ -60,7 +64,7 @@ def validate_row(r):
     validate_score(r)
     if "impact" in r:
         validate_impact(r["impact"])
-    if (r.get("status") != "accepted" or r.get("season") != SEASON or r["hole"] not in TARGETS
+    if (r.get("status") != "accepted" or r.get("season") != SEASON or not valid_target(r["hole"])
             or not LOGIN.fullmatch(r["author"]) or not HEX.fullmatch(r["source_sha256"])
             or not HEX.fullmatch(r["certificate_sha256"])):
         raise ValueError("Invalid receipt")
@@ -88,6 +92,9 @@ def record(event, receipt, folder):
         previous = json.loads((dest / "score.json").read_text())
         if any(previous[k] != row[k] for k in ("source_sha256", "nodes", "hole", "certificate_sha256")):
             raise ValueError("Non-reproducible rerun of an accepted entry")
+        for key in ("archive_module", "archive_deps", "standalone_rh_nodes", "combine", "verifier", "axioms_scope"):
+            if previous.get(key) != row.get(key):
+                raise ValueError("Non-reproducible archive substitution")
         if "impact" in row:
             supplement = dest / "impact.json"
             old = previous.get("impact")
@@ -153,7 +160,8 @@ def render(ledger, output):
     backfills = json.loads((ROOT / "judge/historic_impact.json").read_text())
     if REPO.lower() == "nikete/rh_golf":
         rows = attach_measurements(rows, backfills)
-    pars, holes, leaders, project, credits = standings(rows, refs, baseline)
+    graph = open_graph() if any("archive_deps" in row for row in rows) else None
+    pars, holes, leaders, project, credits = standings(rows, refs, baseline, graph)
     for r in rows:
         r["points"] = credits.get(r["issue"], 0)
     output.mkdir(parents=True, exist_ok=True)
@@ -166,21 +174,55 @@ def render(ledger, output):
         (output / path).write_text(shell.replace("{{TITLE}}", esc(title)).replace("{{BODY}}", body)
                                   .replace("{{REPO}}", GITHUB))
 
-    leaderboard = elem_table(["Rank", "Player", "Holes", "RH nodes saved", "Share of original RH"],
+    leaderboard = elem_table(["Rank", "Player", "Targets", "RH nodes saved", "Share of original RH"],
         [[str(rank), player(p), str(p["holes"]), f"<strong>{fmt(p['points'])}</strong>",
           f"{100*p['points']/project['archive_nodes']:.8f}%"]
          for rank, p in ordinal(leaders, "points")],
         "The first accepted entry opens the standings. Course references earn no player points.")
-    cards = []
-    for n, h in enumerate(CONFIG, 1):
-        k = h["id"]
-        size = f"{fmt(pars[k])} nodes" if k in pars else "Open record"
-        entrants = len(holes[k])
-        cards.append(f"""<a class='hole' href='{k}.html'><div class='holemeta'><span>Hole {n:02d}</span>
-          <span>{esc(h['class'])}</span></div><h3>{esc(h['name'])}</h3>
-          <p>{esc(h['description'])}</p><div class='holefoot'><b>{size}</b>
-          <span>{entrants} player{'s' if entrants != 1 else ''} <i>↗</i></span></div></a>""")
-    earn = sum(len(holes[h["id"]]) for h in CONFIG)
+    entry_url = GITHUB + "/issues/new?template=entry.md"
+    archive_url = "https://github.com/Deicyde/riemann-hypothesis/tree/40e56bab026552e089d7afcfeff08d2defb9c005/src"
+    large_sources = archive_url.replace("/tree/", "/blob/") + "/Development/AbelianVarietyTheory/Proofs/IwasawaDecomposition"
+    large_targets = elem_table(["Declaration", "Original local nodes", "Source"], [
+        ["GlobalTheory.HeightCounting.SideCopy.LamCopy.lam_copy", fmt(5_538_412),
+         link(large_sources + "/LamCopy.lean#L15", "LamCopy.lean ↗")],
+        ["GlobalTheory.HeightCounting.SideCopy.sigSpan_copy", fmt(4_598_434),
+         link(large_sources + "/RingSpecNormalisedCharacterEq.lean#L97", "RingSpecNormalisedCharacterEq.lean ↗")],
+    ], "")
+    archive_names = {"reflection": "Formalism.VW.rh_of_right", "riemann": "riemannHypothesis"}
+    target_names = {r["issue"]: archive_names.get(r["hole"], r["hole"]) for r in rows}
+    for r in rows:
+        target = target_names[r["issue"]]
+        standalone = r.get("standalone_rh_nodes")
+        if standalone is None and "impact" in r:
+            size = r["impact"]["private_nodes"] + sum(r["impact"]["shared"].values())
+            if target == "Formalism.VW.rh_of_right":
+                standalone = baseline["spine_nodes"] + size
+            elif target == "riemannHypothesis":
+                standalone = size
+        if r["hole"] == "window-logic":
+            standalone = project["archive_nodes"]
+        r["standalone_saved_nodes"] = None if standalone is None else project["archive_nodes"] - standalone
+
+    def standalone_cell(row):
+        savings = row["standalone_saved_nodes"]
+        if savings is not None:
+            return fmt(savings)
+        return "Needs partner" if row["hole"] in ("prime-window", "prime-supply") else "Pending"
+
+    def accepted_entry(row):
+        issue = row["issue"]
+        target = esc(target_names[issue])
+        reuse = row.get("verifier") == "pinned-export-exact-reuse-v1"
+        if reuse:
+            target += "<br><small>Reuses " + esc(row["reuse_donor"]) + "</small>"
+        source = link(f"proofs/{issue}.lean", "Instruction" if reuse else "Proof")
+        receipt = link(run_url(row), "Export receipt" if reuse else "CI receipt")
+        return [link(f"{GITHUB}/issues/{issue}", f"#{issue}"), target, player(row), fmt(row["nodes"]),
+                standalone_cell(row), fmt(row["points"]), source + " · " + receipt]
+
+    entries_table = elem_table(["Entry", "Target", "Player", "Local nodes", "Nodes saved alone", "Points earned", "Evidence"],
+        [accepted_entry(r) for r in sorted(rows, key=lambda r: r["issue"], reverse=True)],
+        "The first accepted replacement will appear here.")
     pct = 100 * project["saved_nodes"] / project["archive_nodes"]
     total_panel = f"""<section id='progress'><div class='sectionhead'><h2>Whole-proof progress</h2>
       {link(GITHUB + '/blob/main/judge/baseline.json', 'Baseline receipt ↗')}</div>
@@ -195,7 +237,7 @@ def render(ledger, output):
         credit_links = [link(f"{GITHUB}/issues/{i}", f"@{accounts[i]} · {fmt(amount)}")
                         for i, amount in h["credits"].items()]
         changes.append([link(f"{GITHUB}/issues/{h['issue']}", f"#{h['issue']}"),
-                        fmt(h["before_nodes"]), fmt(h["after_nodes"]), ", ".join(credit_links)])
+                        esc(target_names[h["issue"]]), fmt(h["before_nodes"]), fmt(h["after_nodes"]), ", ".join(credit_links)])
     bounty_rows = []
     project["bounties"] = []
     for issue, name, denominator, percent in (
@@ -215,26 +257,40 @@ def render(ledger, output):
     history_table = ""
     if changes:
         history_table = "<h3>Record improvements</h3>" + elem_table(
-            ["Entry", "Before", "After", "Credit"], changes, "")
+            ["Entry", "Target", "Before", "After", "Credit"], changes, "")
     if project["pending_issues"]:
         history_table += "<p>Awaiting whole-proof replay: " + ", ".join(
             link(f"{GITHUB}/issues/{i}", f"#{i}") for i in project["pending_issues"]) + ".</p>"
     page("index.html", "RH Golf · Riemann proof league", f"""
-    <section class='hero'><div class='herocopy'><p class='eyebrow'><span class='dot'></span> Season 01 · Open course</p>
-    <h1>Riemann<br><em>Proof Golf</em></h1><p class='intro'>Find a smaller Lean proof of the Riemann hypothesis. Each point is one node removed from the best complete proof.</p>
-    <div class='buttons'><a class='primary' href='#course'>Choose a hole <span>↓</span></a>
-    <a class='plain' href='rules.html'>Scoring rules →</a></div></div>
+    <section class='hero'><div class='herocopy'>
+    <h1>Riemann<br><em>Proof Golf</em></h1><p class='intro'>Shrink a theorem or definition anywhere in the Lean proof of the Riemann hypothesis. Each node removed from the complete proof earns one point.</p>
+    <div class='buttons'><a class='primary' href='{entry_url}'>Submit a replacement ↗</a>
+    <a class='plain' href='proof.html'>Explore the proof →</a></div></div>
     <figure><img src='critical-strip.svg' width='530' height='322' alt='The critical line at real part one half, with the first three positive zeta zero heights marked.'>
     <figcaption>Critical strip <span>ζ(s) = 0</span></figcaption></figure></section>
-    {total_panel}{bounties}<section id='course'><div class='sectionhead'><h2>The course</h2><a href='proof.html'>How the holes fit together →</a></div><div class='holes'>{"".join(cards)}</div></section>
-    <section id='standings'><div class='sectionhead'><h2>Leaderboard</h2><span>{len(leaders)} players · {earn} personal bests</span></div>
-    {leaderboard}{history_table}</section>""")
-    for i, h in enumerate(CONFIG, 1):
+    {total_panel}{bounties}<section id='course' class='submit-target'><div class='sectionhead'><h2>Choose a declaration</h2>
+    {link(archive_url, 'Browse the archive ↗')}</div>
+    <p>Use the declaration’s full Lean name in a new issue title. For example, to replace the reflection step, use</p>
+    <pre>[entry] Formalism.VW.rh_of_right</pre>
+    <p>Put your replacement, named <b>Entry.answer</b>, in a fenced Lean block in the issue body. A theorem must prove the original statement.
+    To replace the entire proof, use <b>[entry] riemannHypothesis</b> and prove Mathlib’s <b>RiemannHypothesis</b>.</p>
+    <p>Found an existing theorem with the exact same statement and universe parameters? Put one line in the Lean fence that names the donor.</p>
+    <pre>reuse Fully.Qualified.Donor</pre>
+    <p>The judge checks the two statements against the pinned export and scores the donor’s reachable dependencies. To try your entry with earlier accepted replacements, add a first line such as <b>-- combine: #1 #7</b>. <a href='rules.html#reuse'>How reuse and joint entries work →</a></p>
+    <div class='buttons'><a class='primary' href='{entry_url}'>Open an entry ↗</a><a class='plain' href='rules.html'>Submission rules →</a></div></section>
+    <section id='large-targets'><h2>Two large proofs to shrink</h2>
+    <p>Ordinary RH uses both declarations. Each count measures the original declaration’s type and proof body.
+    The points you earn depend on which dependencies your replacement still uses and how much it improves the current record.</p>{large_targets}
+    <p>Copy a declaration name into your issue title after <b>[entry]</b>. These modules have large import trees. Building one from scratch can exceed the hosted runner’s time or memory limit. <a href='rules.html'>Entry limits →</a></p></section>
+    <section id='standings'><div class='sectionhead'><h2>Leaderboard</h2><span>{len(leaders)} players</span></div>
+    {leaderboard}{history_table}</section>
+    <section id='entries'><div class='sectionhead'><h2>Accepted entries</h2><span>{len(rows)} proofs</span></div><p>Nodes saved alone compares each replacement with the untouched archive. Points earned measure the improvement over the best complete proof at the time.</p>{entries_table}</section>""")
+    for h in CONFIG:
         k = h["id"]
         ranks = [[str(rank), player(r), fmt(r["nodes"]), str(r["points"]),
                   link(run_url(r), "CI receipt ↗") + " · " + link(f"proofs/{r['issue']}.lean", "Proof")]
                  for rank, r in ordinal(holes[k], "nodes")]
-        standings_html = elem_table(["Local rank", "Player", "Local nodes", "RH nodes credited", "Evidence"], ranks, "This hole is open for its first entry.")
+        standings_html = elem_table(["Local rank", "Player", "Local nodes", "RH nodes credited", "Evidence"], ranks, "No accepted entries yet.")
         ref = refs.get(k)
         if ref:
             benchmark = f"""<div class='benchmark'><span>Course reference</span><strong>{fmt(ref['nodes'])} nodes</strong>
@@ -242,21 +298,22 @@ def render(ledger, output):
         else:
             benchmark = "<div class='benchmark'><span>Course reference</span><strong>Open record</strong></div>"
         note = {
-            "window-logic": "Practice hole. Its local record is tracked. The ordinary RH proof has no dependency on this exercise.",
-            "reflection": ("The kernel checks the replacement at the archive’s reflection interface. "
-                           f"Changing this step alone could save at most {fmt(project['reflection_headroom_nodes'])} "
-                           "more nodes against today’s complete-proof record."),
+            "window-logic": "Practice target. Its local record is tracked. The ordinary RH proof has no dependency on this exercise.",
+            "reflection": "The kernel checks the replacement at the archive’s reflection interface.",
             "prime-window": "This entry joins a proof of the estimate. The pair earns points when its complete RH proof sets a record.",
             "prime-supply": "This entry joins the criterion taking the estimate to RH. The pair can bypass the archive’s full nonvanishing argument.",
             "riemann": "A compact unconditional proof competes against the entire current RH proof."
         }[k]
+        if k == "reflection" and project.get("reflection_headroom_nodes") is not None:
+            note += (f" Changing this step alone could save at most {fmt(project['reflection_headroom_nodes'])} "
+                     "more nodes against the current complete-proof record.")
         page(k + ".html", h["name"] + " · RH Golf", f"""
-          <section class='inner'><a class='back' href='index.html#course'>← Course</a><p class='eyebrow'>Hole {i:02d} · {esc(h['class'])}</p>
+          <section class='inner'><a class='back' href='index.html#entries'>← Entries</a><p class='eyebrow'>{esc(h['class'])}</p>
           <h1>{esc(h['name'])}</h1><p class='intro'>{esc(h['description'])}</p><p>{esc(note)}</p>
           <code>theorem Entry.answer : {esc(h['target'])} := by …</code>
           <div class='buttons'><a class='primary' href='{esc(submit_url(k),quote=True)}'>Submit a proof ↗</a>
           <a class='plain' href='{GITHUB}/blob/main/League/Targets.lean'>Target definitions ↗</a></div>
-          {benchmark}<div class='sectionhead'><h2>Hole standings</h2><span>Fewest nodes wins</span></div>{standings_html}</section>""")
+          {benchmark}<div class='sectionhead'><h2>Local records</h2><span>Fewest nodes wins</span></div>{standings_html}</section>""")
     rules = (ROOT / "site/rules.html").read_text().replace("{{REPO}}", GITHUB)
     page("rules.html", "Scoring rules · RH Golf", rules)
     map_text = (ROOT / "site/proof.html").read_text()

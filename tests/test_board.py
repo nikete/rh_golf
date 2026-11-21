@@ -9,7 +9,7 @@ from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "judge"))
 from board import record, render, standings
-from run import Rejected, event_submission
+from run import Rejected, directives, event_submission
 
 class BoardTests(unittest.TestCase):
     def row(self, author, size, issue, hole="reflection", shared=None):
@@ -58,12 +58,22 @@ class BoardTests(unittest.TestCase):
         self.assertEqual(credits, {2: 600, 3: 8, 4: 7})
         self.assertEqual(project["current_nodes"], 285)
 
+    def test_full_name_and_historic_spelling_share_a_personal_record(self):
+        rows = [self.row("a", 70, 1), self.row("a", 50, 2, "Formalism.VW.rh_of_right")]
+        self.assertEqual(self.scoring(rows)[2], [{"author": "a", "holes": 1, "points": 50}])
+
+    def test_optional_portfolio_header(self):
+        self.assertEqual(directives("-- combine: #2 #3\nreuse A.b\n"), ([2, 3], "reuse A.b\n"))
+        with self.assertRaises(Rejected):
+            directives("-- combine: #2 #2\nreuse A.b\n")
+        with self.assertRaises(Rejected):
+            directives("-- combine: 2\nreuse A.b\n")
+
     def test_event_only_takes_attribution_from_github(self):
         event = {"issue": {"title": "[entry] reflection", "body": "```lean\nx\n```", "user": {"login": "player"}}}
         self.assertEqual(event_submission(event), ("reflection", "x\n", "player"))
         event["issue"]["title"] = "[entry] imaginary"
-        with self.assertRaises(Rejected):
-            event_submission(event)
+        self.assertEqual(event_submission(event)[0], "imaginary")
         event["issue"]["title"] = "[entry] reflection"
         event["issue"]["body"] += "\nBy: somebody else"
         with self.assertRaises(Rejected):

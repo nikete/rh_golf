@@ -7,15 +7,20 @@ jobs:
   judge:
     if: startsWith(github.event.issue.title, '[entry] ')
     runs-on: ubuntu-24.04
-    timeout-minutes: 40
+    timeout-minutes: 330
     permissions:
       contents: read
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           persist-credentials: false
+      - name: Select the verifier
+        id: entry
+        run: python3 judge/run.py --preflight --event "$GITHUB_EVENT_PATH" >> "$GITHUB_OUTPUT"
       - uses: ./.github/actions/prepare
-      - run: docker pull "$(cat judge/image.txt)"
+        if: steps.entry.outputs.needs_lean == 'true'
+      - if: steps.entry.outputs.needs_lean == 'true'
+        run: docker pull "$(cat judge/image.txt)"
       - name: Compile, replay and measure
         run: python3 judge/run.py --event "$GITHUB_EVENT_PATH" --output .out/receipt.json
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
@@ -23,10 +28,24 @@ jobs:
           name: receipt
           path: .out/receipt.json
           if-no-files-found: error
+  verification_interrupted:
+    needs: judge
+    if: failure() && needs.judge.result == 'failure'
+    runs-on: ubuntu-24.04
+    permissions:
+      issues: write
+    steps:
+      - name: Link the failed verification
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+        run: |
+          gh issue comment "$ISSUE_NUMBER" --repo "$GITHUB_REPOSITORY" \
+            --body "Verification was interrupted before a score was available. [Runner log](https://github.com/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID). This run can be retried."
   record:
     needs: judge
     runs-on: ubuntu-24.04
-    timeout-minutes: 8
+    timeout-minutes: 20
     permissions:
       contents: write
       issues: write
@@ -58,17 +77,26 @@ jobs:
               share = 100 * entry["points"] / project["archive_nodes"]
               summary = (f"Accepted on **{r['hole']}** with **{r['nodes']:,} local nodes**. "
                          f"Credited **{entry['points']:,} RH nodes** ({share:.8f}% of the original ordinary RH proof).")
+              if "standalone_rh_nodes" in r:
+                  delta = project["archive_nodes"] - r["standalone_rh_nodes"]
+                  summary += f" Used alone in the archive, this edit saves **{delta:,} nodes**."
+              warning = project.get("bundle_warnings", {}).get(str(issue))
+              if warning:
+                  summary += f" Optional combination skipped: {warning}."
               if r["hole"] == "window-logic":
-                  summary += " This is a practice hole."
+                  summary += " This is a practice entry."
               if r["hole"] in ("prime-window", "prime-supply"):
                   summary += " Credit on the prime route requires a record-setting pair and can update when a partner arrives."
               summary += f" Current complete proof: **{project['current_nodes']:,} nodes**."
+          elif r["status"] == "unverified":
+              summary = "Verification could not finish on this runner. The entry can be retried.\n\n" + r["reason"]
           else:
               summary = "Entry rejected.\n\n" + "\n".join("    " + line for line in r["reason"].splitlines())
           run = f"https://github.com/{os.environ['GITHUB_REPOSITORY']}/actions/runs/{os.environ['GITHUB_RUN_ID']}"
           pathlib.Path(".out/verdict.md").write_text(summary + f"\n\n[Judge run]({run})")
           with open(os.environ["GITHUB_OUTPUT"], "a") as f:
               print("accepted=" + str(accepted).lower(), file=f)
+              print("status=" + r["status"], file=f)
           PY
       - name: Post the verdict on the entry
         continue-on-error: true
@@ -76,6 +104,9 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           ISSUE_NUMBER: ${{ github.event.issue.number }}
         run: gh issue comment "$ISSUE_NUMBER" --body-file .out/verdict.md
+      - name: Flag incomplete verification for retry
+        if: steps.result.outputs.status == 'unverified'
+        run: exit 1
   publish:
     needs: record
     if: needs.record.outputs.accepted == 'true'
