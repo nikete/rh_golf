@@ -25,7 +25,7 @@ jobs:
           persist-credentials: false
       - uses: ./.github/actions/prepare
       - run: python3 -m unittest discover -s tests -v
-      - run: docker pull ubuntu:24.04
+      - run: docker pull "$(cat judge/image.txt)"
       - name: Judge the examples through the public sandbox
         run: |
           python3 judge/run.py --hole window-logic --source examples/window-logic.lean --output .out/window-logic.json
@@ -34,7 +34,7 @@ jobs:
           import json, pathlib
           for ref in json.load(open("judge/references.json")):
               observed = json.loads(pathlib.Path(f".out/{ref['hole']}.json").read_text())
-              for k in ("nodes", "helpers", "axioms", "source_sha256"):
+              for k in ("nodes", "helpers", "axioms", "source_sha256", "certificate_sha256"):
                   assert observed[k] == ref[k], (k, observed, ref)
               print(ref["hole"], observed["nodes"], observed["certificate_sha256"])
           PY

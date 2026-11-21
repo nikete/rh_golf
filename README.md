@@ -48,14 +48,14 @@ On x86-64 Ubuntu, a clean checkout needs git, curl, Python 3, zstd, Docker and r
 
 ```sh
 bash judge/prepare.sh
-docker pull ubuntu:24.04
+docker pull "$(cat judge/image.txt)"
 python3 judge/run.py --hole reflection --source examples/reflection.lean --output .out/result.json
 python3 -m unittest discover -s tests -v
 bash judge/snapshot.sh
 python3 -m http.server 8000 -d public
 ```
 
-For a fresh fork, enable Issues and set **Settings → Pages → Build and deployment → Source → GitHub Actions** once. Run **Publish standings**. Its render job also produces the static site as a downloadable Pages artifact. A push runs both course references through the public candidate path and rejects admitted and wrong-target proofs. Start a new season when changing the course library, metric or target definitions.
+For a fresh fork, enable Issues, select **GitHub Actions** as the Pages publishing source and run **Publish standings**. The publisher also supports an existing Pages site served from the root of `gh-pages`. In that mode it pushes the generated site and requests the Pages build. Both modes produce a downloadable HTML artifact. Changes to the course or judge run both references through the public candidate path and test that admitted and wrong-target proofs are rejected. Start a new season when changing the course library, metric or target definitions.
 
 ## Design precedents
 

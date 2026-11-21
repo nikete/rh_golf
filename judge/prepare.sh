@@ -44,3 +44,6 @@ else
 fi
 lake env lean judge/Extract.lean
 lake env lean judge/Replay.lean
+# Mathlib's cache extracts some artifacts with mode 0600. Public submissions read
+# the course as nobody, through a read-only mount.
+chmod -R a+rX .lake

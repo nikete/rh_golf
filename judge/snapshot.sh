@@ -7,4 +7,4 @@ if [[ -n "$remote" ]]; then
   git fetch --quiet --depth=1 origin refs/heads/golf-scores
   git archive FETCH_HEAD:ledger | tar -xf - -C .out/ledger
 fi
-python3 judge/board.py --ledger .out/ledger --site public
+COURSE_COMMIT=$(git rev-parse HEAD) python3 judge/board.py --ledger .out/ledger --site public

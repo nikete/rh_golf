@@ -196,7 +196,8 @@ def render(ledger, output):
     proofs.mkdir(exist_ok=True)
     for r in rows:
         shutil.copyfile(ledger / SEASON / str(r["issue"]) / "Entry.lean", proofs / f"{r['issue']}.lean")
-    (output / "scores.json").write_text(json.dumps({"season": SEASON, "holes": CONFIG, "references": refs,
+    (output / "scores.json").write_text(json.dumps({"season": SEASON, "course_commit": os.getenv("COURSE_COMMIT"),
+        "holes": CONFIG, "references": refs,
         "records": pars, "players": leaders, "personal_bests": dict(holes), "accepted": rows}, indent=2) + "\n")
 
 

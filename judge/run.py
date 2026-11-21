@@ -18,6 +18,7 @@ ALLOWED_AXIOMS = {"propext", "Classical.choice", "Quot.sound"}
 MAX_SOURCE = 48 * 1024
 MAX_CERT = 8 * 1024 * 1024
 MAX_NODES = 100_000
+SANDBOX_IMAGE = (ROOT / "judge/image.txt").read_text().strip()
 ISSUE_TITLE = re.compile(r"^\[entry\]\s+([a-z-]+)(?:\s+.*)?$", re.I)
 SOURCE_BLOCK = re.compile(r"\A(?:### Lean source\s+)?```(?:lean4?|Lean)?[ \t]*\n(.*?)\n```\s*\Z", re.S)
 LOGIN = re.compile(r"[A-Za-z0-9][A-Za-z0-9-]{0,38}\Z")
@@ -103,12 +104,12 @@ def elaborate(src, env, toolchain, work, trusted_example):
                 "-v", f"{ROOT}/judge/Extract.lean:/Extract.lean:ro",
                 "-v", f"{work}/Entry.lean:/input/Entry.lean:ro",
                 "-e", "HOME=/tmp", "-e", "LEAN_ABORT_ON_PANIC=1", "-e", "LEAN_NUM_THREADS=2",
-                "-e", f"LEAN_PATH=/tmp:{search}", "-w", "/tmp", "ubuntu:24.04", "sh", "-ec",
+                "-e", f"LEAN_PATH=/tmp:{search}", "-w", "/tmp", SANDBOX_IMAGE, "sh", "-ec",
                 "cp /input/Entry.lean Entry.lean; "
                 "/opt/lean/bin/lean -o Entry.olean Entry.lean >&2; "
                 "/opt/lean/bin/lean --run /Extract.lean /tmp/proof.json >&2; cat /tmp/proof.json"]
         # Download the standard userspace before the networkless container is started.
-        subprocess.run(["docker", "image", "inspect", "ubuntu:24.04"], check=True,
+        subprocess.run(["docker", "image", "inspect", SANDBOX_IMAGE], check=True,
                        stdout=subprocess.DEVNULL, timeout=20)
         with (work / "proof.json").open("wb") as cert, (work / "compile.log").open("wb") as log:
             try:

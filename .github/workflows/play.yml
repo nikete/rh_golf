@@ -15,7 +15,7 @@ jobs:
         with:
           persist-credentials: false
       - uses: ./.github/actions/prepare
-      - run: docker pull ubuntu:24.04
+      - run: docker pull "$(cat judge/image.txt)"
       - name: Compile, replay and measure
         run: python3 judge/run.py --event "$GITHUB_EVENT_PATH" --output .out/receipt.json
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
@@ -58,12 +58,17 @@ jobs:
           with open(os.environ["GITHUB_OUTPUT"], "a") as f:
               print("accepted=" + str(accepted).lower(), file=f)
           PY
-          gh issue comment "$ISSUE_NUMBER" --body-file .out/verdict.md
+      - name: Post the verdict on the entry
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+        run: gh issue comment "$ISSUE_NUMBER" --body-file .out/verdict.md
   publish:
     needs: record
     if: needs.record.outputs.accepted == 'true'
     uses: ./.github/workflows/pages.yml
     permissions:
-      contents: read
+      contents: write
       pages: write
       id-token: write
