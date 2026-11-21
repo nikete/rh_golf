@@ -1,0 +1,1 @@
+reuse Formalism.MainStatements.RowRest.covariance_formula
