@@ -19,7 +19,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Install the Linux sandbox used by Lean Comparator
-        run: command -v bwrap || (sudo apt-get update -qq && sudo apt-get install -y bubblewrap)
+        run: bash judge/audit/hosted_sandbox.sh
       - name: Provision pinned checkers
         run: |
           echo "AUDIT_TOOLS=$RUNNER_TEMP/rh-checkers" >> "$GITHUB_ENV"

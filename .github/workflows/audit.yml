@@ -93,13 +93,15 @@ jobs:
           export PATH="$PWD/.tools/lean-4.33.1-linux/bin:$PATH"
           lake exe cache get Mathlib || lake exe cache get Mathlib
           lake env lean --run judge/baseline/LibraryNames.lean | gzip -1 > "$WORK/library.jsonl.gz"
+          inventory=$(python3 -c 'import json; print(json.load(open("judge/baseline.json"))["mathlib_inventory_sha256"])')
+          printf '%s  %s\n' "$inventory" "$WORK/library.jsonl.gz" | sha256sum --check
           nodes=$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1]))["subject"]["nodes"])' "$WORK/build.json")
           python3 judge/audit/measure_export.py --input "$WORK/solution.ndjson" --mathlib-names "$WORK/library.jsonl.gz" --work "$WORK/index" --expected "$nodes" --output "$WORK/count.json"
       - name: Free the hosted course workspace after recount
         if: matrix.replica == 'b' && vars.RH_AUDIT_RUNNER == ''
         run: |
           rm -rf .lake .tools/lean-4.33.1-linux
-          command -v bwrap || (sudo apt-get update -qq && sudo apt-get install -y bubblewrap)
+          bash judge/audit/hosted_sandbox.sh
       - name: Check the challenge and the inert solution with the pinned checkers
         if: matrix.replica == 'b'
         run: |

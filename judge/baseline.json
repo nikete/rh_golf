@@ -29,6 +29,7 @@
     ]
   ],
   "lean": "v4.33.1",
+  "mathlib_inventory_sha256": "3d7bc93ac28fb6350fed0ce3cbd6777b0d78235394a5c5fb76b91f725c91ec5d",
   "mathlib": "0df444a360eaa60ab8c11dca51a86af692955474",
   "export_url": "https://math.mit.edu/~drew/grh/solution.ndjson.zst",
   "export_format": "3.1.0",

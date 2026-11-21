@@ -20,6 +20,8 @@ REPO = os.getenv("GITHUB_REPOSITORY", "nikete/rh_golf")
 if not REPO_RE.fullmatch(REPO):
     raise ValueError("Invalid repository")
 GITHUB = "https://github.com/" + REPO
+CHECKER_LABELS = {"comparator": "Comparator", "lean_kernel": "Lean kernel", "nanoda": "nanoda",
+                  "con_leche": "con-leche", "con_leche_compare": "con-leche --compare"}
 
 
 def target_key(hole):
@@ -212,7 +214,17 @@ def render(ledger, output):
     audit_dir = ledger / SEASON / "audits"
     official_records, official_bests, leaders, project, credits = standings(rows, refs, baseline, graph, audit_dir=audit_dir)
     audits_for = defaultdict(list)
+    transcript_links = {}
     for audit in project["audits"]:
+        subject = audit["subject_id"]
+        receipt = json.loads((audit_dir / f"{subject}.json").read_text())
+        checkers = defaultdict(list)
+        for checker, result in receipt["checker_receipt"]["checks"].items():
+            checkers[result["log_sha256"]].append(CHECKER_LABELS[checker])
+        transcript_links[subject] = [
+            link(f"https://raw.githubusercontent.com/{REPO}/golf-scores/ledger/{SEASON}/audits/logs/{digest}.log.gz",
+                 " / ".join(names) + " log")
+            for digest, names in checkers.items() if (audit_dir / "logs" / f"{digest}.log.gz").is_file()]
         for issue in audit["entries"]:
             audits_for[issue].append(audit)
     for r in rows:
@@ -294,6 +306,7 @@ def render(ledger, output):
         for audit in audits_for[issue]:
             links.append(link(f"audits/{audit['subject_id']}.json", "Route audit"))
             links.append(link(run_url(audit), "Audit job"))
+            links.extend(transcript_links[audit["subject_id"]])
         return " · ".join(links)
 
     def accepted_entry(row):

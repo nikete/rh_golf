@@ -8,6 +8,7 @@ import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from audit.candidate import SEASON, select
+from audit.evidence_logs import archive_checker_logs
 from post import update_ledger
 from route_audit import subject_id, validate_attestation
 
@@ -18,7 +19,8 @@ def evidence(first, second, count, checks, subject, run, attempt, commit):
     receipt = {
         "schema": 1, "subject": subject, "solution_sha256": first["solution_sha256"],
         "reproductions": [first["solution_sha256"], second["solution_sha256"]],
-        "measured_nodes": count["nodes"], "measured_export_sha256": count["export_sha256"],
+        "measured_root": count["root"], "measured_nodes": count["nodes"],
+        "measured_export_sha256": count["export_sha256"], "mathlib_inventory_sha256": count["mathlib_inventory_sha256"],
         "checker_receipt": checks, "run": run, "attempt": attempt, "commit": commit,
     }
     validate_attestation(receipt, subject)
@@ -59,6 +61,7 @@ def main():
         subject = select(ledger, args.issue, None)["subject"]
         attestation = evidence(*inputs, subject, int(os.environ["GITHUB_RUN_ID"]),
                                int(os.environ["GITHUB_RUN_ATTEMPT"]), os.environ["GITHUB_SHA"])
+        archive_checker_logs(attestation["checker_receipt"], args.checks.parent, ledger / SEASON / "audits/logs")
         store_attestation(ledger, subject, attestation)
 
     update_ledger(write, f"Certify the complete proof for entry #{args.issue}")

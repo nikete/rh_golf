@@ -35,6 +35,8 @@ jobs:
           lake exe cache get Mathlib
           mkdir -p .out
           lake env lean --run judge/baseline/LibraryNames.lean | gzip -1 > .out/mathlib-names.jsonl.gz
+          inventory=$(python3 -c 'import json; print(json.load(open("judge/baseline.json"))["mathlib_inventory_sha256"])')
+          printf '%s  %s\n' "$inventory" .out/mathlib-names.jsonl.gz | sha256sum --check
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: pinned-mathlib-names

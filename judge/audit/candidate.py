@@ -16,7 +16,7 @@ from impact import footprint_size
 from reuse import METHOD as SINGLE_REUSE
 from reuse.manifest import fetch_pairs
 from route_audit import make_subject, subject_id
-from run import SEASON
+from run import PORTFOLIO, REUSE, SEASON, directives, validate_source
 
 BASELINE = json.loads((ROOT / "judge/baseline.json").read_text())
 
@@ -79,6 +79,35 @@ def select(ledger, issue, originating_run):
             "subject_id": subject_id(subject)}
 
 
+def reuse_arguments(row, source, work):
+    nominations, body = directives(validate_source(source.read_text(encoding="utf-8")))
+    if nominations != row.get("combine", []):
+        raise ValueError("The frozen nomination differs from the receipt")
+    if row["verifier"] == SINGLE_REUSE:
+        match = REUSE.fullmatch(body)
+        if not match or match[1].strip() != row["reuse_donor"]:
+            raise ValueError("The frozen instruction and recorded donor differ")
+        return ["--target", row["hole"], "--donor", match[1].strip()]
+    match = PORTFOLIO.fullmatch(body)
+    if (not match or nominations or row["hole"] != "riemannHypothesis" or row["verifier"] != PORTFOLIO_VERIFIER
+            or match.groups() != (row["portfolio_url"], row["portfolio_sha256"])):
+        raise ValueError("The frozen instruction and recorded portfolio differ")
+    # fetch_pairs verifies the submitted compressed bytes and line format once.
+    manifest = work / "pairs.jsonl.gz"
+    with gzip.open(manifest, "wt", encoding="utf-8") as out:
+        for pair in fetch_pairs(*match.groups()):
+            out.write(json.dumps(pair, ensure_ascii=False, separators=(",", ":")) + "\n")
+    return ["--manifest", str(manifest)]
+
+
+def check_rewrite(row, report, solution_hash):
+    if (report["certificate_sha256"] != row["certificate_sha256"]
+            or type(report["expected_nodes"]) is not int or report["expected_nodes"] != row["standalone_rh_nodes"]
+            or report["candidate_sha256"] != solution_hash or report["original_sha256"] != BASELINE["unpacked_sha256"]
+            or row["verifier"] == PORTFOLIO_VERIFIER and report["coverage"] != row["portfolio_coverage"]):
+        raise ValueError("The regenerated exact-reuse proof differs from the frozen receipt")
+
+
 def materialize(ledger, issue, work):
     row, source = read_entry(ledger, issue)
     selected = select(ledger, issue, None)
@@ -103,24 +132,18 @@ def materialize(ledger, issue, work):
                          "--max-export-bytes", str(256 << 30), "--timeout-seconds", "64800"])
         subprocess.run(args, check=True)
     else:
+        instruction = reuse_arguments(row, source, work)
         archive = work / "original.ndjson.zst"
         subprocess.run(["curl", "-fsSL", "--retry", "3", "--output", str(archive), BASELINE["export_url"]], check=True)
         args = [sys.executable, "judge/audit/rewrite.py", "--input", str(archive), "--output", str(solution),
-                "--graph", str(ROOT / ".out/archive-graph")]
-        if method == "portfolio":
-            # Verify the contestant's compressed bytes first; pass only validated data to the rewriter.
-            manifest = work / "pairs.jsonl.gz"
-            with gzip.open(manifest, "wt", encoding="utf-8") as out:
-                for pair in fetch_pairs(row["portfolio_url"], row["portfolio_sha256"]):
-                    out.write(json.dumps(pair, ensure_ascii=False, separators=(",", ":")) + "\n")
-            args.extend(["--manifest", str(manifest)])
-        else:
-            args.extend(["--target", row["hole"], "--donor", row["reuse_donor"]])
+                "--graph", str(ROOT / ".out/archive-graph"), *instruction]
         subprocess.run([sys.executable, "judge/fetch_graph.py"], check=True)
-        subprocess.run(args, check=True)
+        rewrite_report = json.loads(subprocess.check_output(args, text=True))
         archive.unlink()
     with solution.open("rb") as f:
         digest = hashlib.file_digest(f, "sha256").hexdigest()
+    if method in ("portfolio", "reuse"):
+        check_rewrite(row, rewrite_report, digest)
     record = {"subject": selected["subject"], "solution_sha256": digest}
     (work / "build.json").write_text(json.dumps(record) + "\n")
 

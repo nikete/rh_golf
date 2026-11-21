@@ -40,7 +40,8 @@ def binding(row):
 def make_subject(rows, route, issue_ids, nodes, baseline, *, refs=None, course_reflection=False, graph=None):
     """Reconstruct a route and its exact cost. Only use rows from the immutable ledger."""
     from impact import footprint_size, validate_impact
-    _require(_positive(nodes) and _hash(baseline.get("compressed_sha256")), "Invalid baseline or node count")
+    _require(_positive(nodes) and _hash(baseline.get("compressed_sha256")) and _hash(baseline.get("mathlib_inventory_sha256")),
+             "Invalid baseline, inventory or node count")
     ids = list(issue_ids)
     _require(all(_positive(i) for i in ids) and len(set(ids)) == len(ids), "Invalid or duplicate route issue")
     by_issue = {row["issue"]: row for row in rows}
@@ -100,6 +101,7 @@ def make_subject(rows, route, issue_ids, nodes, baseline, *, refs=None, course_r
             raise ValueError("Unknown or unmeasured whole-proof route")
     _require(measured == nodes, "Route cost differs from the recorded measurement")
     return {"version": 1, "root": ROOT, "metric": baseline["metric"], "archive_sha256": baseline["compressed_sha256"],
+            "mathlib_inventory_sha256": baseline["mathlib_inventory_sha256"],
             "route": route, "nodes": nodes, "entries": [binding(row) for row in selected],
             "course_reflection": binding(course) if course else None}
 
@@ -116,6 +118,10 @@ def validate_attestation(receipt, subject):
     solution = receipt.get("solution_sha256")
     _require(_hash(solution) and receipt.get("reproductions") == [solution, solution],
              "The two derivations must produce the same solution export")
+    _require(receipt.get("measured_root") == subject["root"] == ROOT, "Recount targeted the wrong root")
+    _require(_hash(subject.get("mathlib_inventory_sha256"))
+             and receipt.get("mathlib_inventory_sha256") == subject["mathlib_inventory_sha256"],
+             "Recount used a different Mathlib inventory")
     _require(_positive(receipt.get("measured_nodes")) and receipt["measured_nodes"] == subject["nodes"]
              and receipt.get("measured_export_sha256") == solution, "Independent export recount mismatch")
     _require(_positive(receipt.get("run")) and _positive(receipt.get("attempt"))

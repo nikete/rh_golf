@@ -20,7 +20,7 @@ class AuditTests(unittest.TestCase):
         work = Path(temp.name)
         self.audits = work / "audits"
         self.audits.mkdir()
-        self.baseline = dict(metric="rh-declaration-nodes-v1", compressed_sha256="a"*64,
+        self.baseline = dict(metric="rh-declaration-nodes-v1", compressed_sha256="a"*64, mathlib_inventory_sha256="8"*64,
                              archive_nodes=1000, spine_nodes=800, composition_nodes=4)
         self.policy = dict(challenge_sha256="c"*64, required_checks=sorted(audit.CHECKS),
                            allowed_axioms=sorted(audit.AXIOMS), check_versions={k:k+"-test" for k in audit.CHECKS})
@@ -49,6 +49,7 @@ class AuditTests(unittest.TestCase):
         checks = {name: {"exit_code": 0, "status": "passed", "log_sha256": "e"*64,
                          "tool_version": self.policy["check_versions"][name]} for name in audit.CHECKS}
         return dict(schema=1, subject=subject, solution_sha256=sha, reproductions=[sha, sha],
+                    measured_root=subject["root"], mathlib_inventory_sha256=subject["mathlib_inventory_sha256"],
                     measured_nodes=nodes, measured_export_sha256=sha, run=1, attempt=1, commit="f"*40,
                     checker_receipt=dict(schema=1, solution_sha256=sha, challenge_sha256=self.policy["challenge_sha256"],
                                          policy_sha256=self.policy_hash, status="passed",
@@ -84,7 +85,7 @@ class AuditTests(unittest.TestCase):
     def test_fail_closed_for_evidence_mismatch(self):
         evidence = self.evidence("direct", [1], 400)
         failures = [
-            ("measured_nodes", 399), ("measured_export_sha256", "b"*64),
+            ("measured_root", "allChi"), ("mathlib_inventory_sha256", "0"*64), ("measured_nodes", 399), ("measured_export_sha256", "b"*64),
             ("reproductions", ["d"*64, "a"*64]), ("run", 0),
             ("solution_sha256", "a"*64),
         ]
@@ -157,8 +158,14 @@ class AuditTests(unittest.TestCase):
         first = self.evidence("direct", [1], 400)
         subject = first["subject"]
         build = {"subject": subject, "solution_sha256": first["solution_sha256"]}
-        count = {"nodes": 400, "export_sha256": build["solution_sha256"]}
+        count = {"root": subject["root"], "nodes": 400, "export_sha256": build["solution_sha256"],
+                 "mathlib_inventory_sha256": subject["mathlib_inventory_sha256"]}
         receipt = evidence(build, build, count, first["checker_receipt"], subject, 1, 1, "a"*40)
+        with self.assertRaisesRegex(ValueError, "wrong root"):
+            evidence(build, build, dict(count, root="allChi"), first["checker_receipt"], subject, 1, 1, "a"*40)
+        with self.assertRaisesRegex(ValueError, "Mathlib inventory"):
+            evidence(build, build, dict(count, mathlib_inventory_sha256="0"*64), first["checker_receipt"],
+                     subject, 1, 1, "a"*40)
         store_attestation(ledger, subject, receipt)
         path = ledger / "1/audits" / (audit.subject_id(subject) + ".json")
         original = path.read_bytes()
@@ -217,6 +224,40 @@ class AuditTests(unittest.TestCase):
             (ledger / "1/1/impact.json").write_text(json.dumps(mismatch))
             with self.assertRaisesRegex(ValueError, "immutable receipt differ"):
                 candidate.select(ledger, 1, None)
+
+    def test_reuse_audit_reconstructs_the_printed_instruction(self):
+        from audit import candidate
+        work = self.audits.parent
+        source = work / "instruction"
+        row = dict(hole="Research.X", verifier=candidate.SINGLE_REUSE, reuse_donor="Research.Y", combine=[1])
+        source.write_text("-- combine: #1\nreuse Research.Y\n")
+        self.assertEqual(candidate.reuse_arguments(row, source, work),
+                         ["--target", "Research.X", "--donor", "Research.Y"])
+        with self.assertRaisesRegex(ValueError, "recorded donor"):
+            candidate.reuse_arguments(dict(row, reuse_donor="Research.Z"), source, work)
+        with self.assertRaisesRegex(ValueError, "nomination"):
+            candidate.reuse_arguments(dict(row, combine=[]), source, work)
+        url = "https://raw.githubusercontent.com/demo/proofs/" + "b"*40 + "/round.jsonl.gz"
+        row = dict(hole="riemannHypothesis", verifier=candidate.PORTFOLIO_VERIFIER, portfolio_url=url,
+                   portfolio_sha256="c"*64, portfolio_coverage={"submitted":1, "reachable":1,"bypassed":0},
+                   standalone_rh_nodes=127, certificate_sha256="d"*64)
+        source.write_text(f"reuse-file {url} " + "c"*64 + "\n")
+        with patch.object(candidate, "fetch_pairs", return_value=[["X", "Y"]]) as fetch:
+            args = candidate.reuse_arguments(row, source, work)
+            self.assertEqual(args[0], "--manifest")
+            fetch.assert_called_once_with(url, "c"*64)
+            with candidate.gzip.open(args[1], "rt") as f:
+                self.assertEqual(json.loads(f.read()), ["X", "Y"])
+            with self.assertRaisesRegex(ValueError, "recorded portfolio"):
+                candidate.reuse_arguments(dict(row, portfolio_sha256="e"*64), source, work)
+            self.assertEqual(fetch.call_count, 1)
+        report = dict(certificate_sha256="d"*64, expected_nodes=127, candidate_sha256="f"*64,
+                      original_sha256=candidate.BASELINE["unpacked_sha256"], coverage=row["portfolio_coverage"])
+        candidate.check_rewrite(row, report, "f"*64)
+        for field, value in (("certificate_sha256","0"*64), ("expected_nodes",126), ("candidate_sha256","e"*64),
+                             ("original_sha256","c"*64), ("coverage",{"submitted":2, "reachable":2, "bypassed":0})):
+            with self.subTest(field), self.assertRaisesRegex(ValueError, "regenerated"):
+                candidate.check_rewrite(row, dict(report, **{field:value}), "f"*64)
 
     def test_standalone_alias_does_not_promote_a_larger_bundle(self):
         self.rows[0].update(hole="Research.A", standalone_rh_nodes=550)
