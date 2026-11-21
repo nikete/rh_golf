@@ -1,0 +1,69 @@
+name: Judge a proof
+on:
+  issues:
+    types: [opened]
+permissions: {}
+jobs:
+  judge:
+    if: startsWith(github.event.issue.title, '[entry] ')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/prepare
+      - run: docker pull ubuntu:24.04
+      - name: Compile, replay and measure
+        run: python3 judge/run.py --event "$GITHUB_EVENT_PATH" --output .out/receipt.json
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: receipt
+          path: .out/receipt.json
+          if-no-files-found: error
+  record:
+    needs: judge
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    permissions:
+      contents: write
+      issues: write
+    outputs:
+      accepted: ${{ steps.result.outputs.accepted }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: receipt
+          path: .out
+      - name: Record the result
+        id: result
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+        run: |
+          python3 - <<'PY'
+          import json, os, pathlib, subprocess
+          r = json.loads(pathlib.Path(".out/receipt.json").read_text())
+          accepted = r["status"] == "accepted"
+          if accepted:
+              subprocess.run(["python3", "judge/post.py", ".out/receipt.json"], check=True)
+              summary = f"Accepted on **{r['hole']}** with **{r['nodes']:,} proof nodes**."
+          else:
+              summary = "Entry rejected.\n\n" + "\n".join("    " + line for line in r["reason"].splitlines())
+          run = f"https://github.com/{os.environ['GITHUB_REPOSITORY']}/actions/runs/{os.environ['GITHUB_RUN_ID']}"
+          pathlib.Path(".out/verdict.md").write_text(summary + f"\n\n[Judge run]({run})")
+          with open(os.environ["GITHUB_OUTPUT"], "a") as f:
+              print("accepted=" + str(accepted).lower(), file=f)
+          PY
+          gh issue comment "$ISSUE_NUMBER" --body-file .out/verdict.md
+  publish:
+    needs: record
+    if: needs.record.outputs.accepted == 'true'
+    uses: ./.github/workflows/pages.yml
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
