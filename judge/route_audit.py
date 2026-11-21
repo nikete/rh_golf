@@ -6,7 +6,8 @@ import re
 
 from archive_portfolio import PORTFOLIO_VERIFIER, REFLECTION, ROOT, portfolio_nodes, replacement_for
 
-POLICY = Path(__file__).resolve().parent / "audit/policy.json"
+JUDGE = Path(__file__).resolve().parent
+POLICY = JUDGE / "audit/policy.json"
 CHECKS = {"lean_kernel", "nanoda", "con_leche", "comparator", "con_leche_compare"}
 AXIOMS = {"Classical.choice", "Quot.sound", "propext"}
 TARGETS = {"reflection": REFLECTION, "riemann": ROOT}
@@ -147,3 +148,116 @@ def validate_attestation(receipt, subject):
                  and check.get("status") == "passed" and type(check.get("exit_code")) is int
                  and check["exit_code"] == 0 and _hash(check.get("log_sha256"))
                  and check.get("tool_version") == version, f"Missing or unsuccessful check: {name}")
+
+
+def validate_delta_source(row, source):
+    from reuse import METHOD as SINGLE
+    from reuse.manifest import validate_url
+    from run import PORTFOLIO, REUSE, SEASON, Rejected, directives, validate_source
+    _require(row.get("status") == "accepted" and row.get("season") == SEASON and
+             row.get("verifier") in (PORTFOLIO_VERIFIER, SINGLE), "Expected an accepted exact-reuse entry")
+    try:
+        normalized = validate_source(source.decode("utf-8"))
+        _require(hashlib.sha256(normalized.encode()).hexdigest() == row.get("source_sha256"),
+                 "Normalized source differs from the frozen receipt")
+        nominations, body = directives(normalized)
+    except Rejected as exc:
+        raise ValueError(str(exc)) from exc
+    _require(subject_id(nominations) == subject_id(row.get("combine", [])), "Frozen reuse nomination and receipt differ")
+    if row.get("verifier") == PORTFOLIO_VERIFIER:
+        match = PORTFOLIO.fullmatch(body)
+        _require(not nominations and row["hole"] == ROOT and match and
+                 match.groups() == (row["portfolio_url"], row["portfolio_sha256"]), "Frozen portfolio instruction and receipt differ")
+        validate_url(match[1])
+        return match.groups()
+    match = REUSE.fullmatch(body)
+    _require(match and match[1].strip() == row.get("reuse_donor"), "Frozen donor and receipt differ")
+    return row["hole"], match[1].strip()
+
+
+def validate_delta_report(report, row, inputs, baseline):
+    """Compare the independent recount and theorem witness to the frozen fast receipt."""
+    from delta_policy import policy_identity
+    from reuse import METHOD as SINGLE
+    verifier = row.get("verifier")
+    _require(verifier in (PORTFOLIO_VERIFIER, SINGLE), "Only exact theorem reuse qualifies for a delta")
+    _require(row.get("axioms") == sorted(AXIOMS) and row.get("axioms_scope") == "pinned-export-upper-bound"
+             and type(row.get("helpers")) is int and row["helpers"] == 0, "Unexpected axiom scope or local helpers")
+    trusted = policy_identity()
+    _require(subject_id(trusted) == subject_id(inputs), "Different delta policy or pinned inputs")
+    _require(isinstance(report, dict), "Missing independent delta checker report")
+    graph_bytes = (JUDGE / "archive_graph.lock.json").read_bytes()
+    graph_pin = json.loads(graph_bytes)
+    groups = graph_pin["files"]["groups.bin"]["bytes"] // 16 - 1
+    size = row["standalone_rh_nodes"]
+    fields = {"schema": 1, "verifier": "rh-exact-theorem-delta-v1", "root": ROOT,
+              "base_export_sha256": baseline["compressed_sha256"], "graph_pin_sha256": trusted["graph_sha256"],
+              "signature_index_sha256": trusted["signatures_sha256"], "archive_groups": groups,
+              "nodes": size, "standalone_rh_nodes": size, "baseline_nodes": baseline["archive_nodes"],
+              "saved_nodes": baseline["archive_nodes"] - size, "certificate_sha256": row["certificate_sha256"],
+              "axioms": sorted(AXIOMS), "axioms_scope": "pinned-export-upper-bound"}
+    _require(graph_pin["export_sha256"] == baseline["compressed_sha256"]
+             and hashlib.sha256(graph_bytes).hexdigest() == trusted["graph_sha256"],
+             "Delta metadata belongs to a different archive")
+    _require(subject_id({k: report.get(k) for k in fields}) == subject_id(fields),
+             "Independent delta checker report differs from the frozen proof or pinned archive")
+    _require(_hash(report.get("normalized_changes_sha256")) and _hash(report.get("portfolio_certificate_sha256"))
+             and _positive(report.get("reachable_groups")) and report["reachable_groups"] <= groups,
+             "Missing transformation identity or invalid reachable declaration count")
+    coverage = report.get("coverage")
+    _require(isinstance(coverage, dict) and set(coverage) == {"submitted", "reachable", "bypassed"}
+             and all(type(v) is int and v >= 0 for v in coverage.values())
+             and 0 < coverage["submitted"] <= groups and coverage["reachable"] <= report["reachable_groups"]
+             and coverage["submitted"] == coverage["reachable"] + coverage["bypassed"], "Invalid delta coverage")
+    if verifier == PORTFOLIO_VERIFIER:
+        _require(row["hole"] == ROOT and not row.get("combine")
+                 and report["portfolio_certificate_sha256"] == row["certificate_sha256"]
+                 and subject_id(coverage) == subject_id(row["portfolio_coverage"]),
+                 "Delta did not verify the submitted portfolio")
+        changed = row["nodes"]
+    else:
+        _require(coverage["submitted"] == 1, "A standalone exact reuse has a single substitution")
+        single = {"local_nodes": row["nodes"], "reuse_statement_id": row["reuse_statement_id"],
+                  "reuse_universe_parameters": row["reuse_universe_parameters"], "archive_deps": row["archive_deps"]}
+        _require(subject_id({k: report.get(k) for k in single}) == subject_id(single),
+                 "Delta did not reproduce the submitted theorem signature, local size or dependencies")
+        _require(subject_id(row.get("impact")) == subject_id({"version": 1, "private_nodes": row["nodes"], "shared": {}}),
+                 "Frozen local theorem footprint disagrees with its checked size")
+        changed = row["nodes"] * coverage["reachable"]
+    _require(type(report.get("changed_live_nodes")) is int and report["changed_live_nodes"] == changed
+             and 0 <= changed <= size, "Incorrect delta weight for reachable substitutions")
+
+
+def validate_delta_attestation(receipt, subject, row, baseline):
+    """Validate a CI-recorded exact theorem transformation on one immutable entry."""
+    keys = {"schema", "verification_kind", "subject", "inputs", "report", "run", "attempt", "commit"}
+    _require(isinstance(receipt, dict) and set(receipt) in (keys, keys | {"entrant_proof"}),
+             "Malformed delta attestation")
+    validate_delta_report(receipt.get("report"), row, receipt.get("inputs"), baseline)
+    route = "archive-portfolio" if row["verifier"] == PORTFOLIO_VERIFIER else "standalone-replacement"
+    expected = make_subject([row], route, [row["issue"]], row["standalone_rh_nodes"], baseline)
+    _require(isinstance(receipt, dict) and type(receipt.get("schema")) is int and receipt["schema"] == 1
+             and receipt.get("verification_kind") == "exact-reuse-delta"
+             and subject_id(expected) == subject_id(subject) == subject_id(receipt.get("subject")),
+             "Delta does not certify this exact standalone subject")
+    _require(_positive(receipt.get("run")) and _positive(receipt.get("attempt"))
+             and isinstance(receipt.get("commit"), str) and re.fullmatch("[a-f0-9]{40}", receipt["commit"]),
+             "Missing delta CI run identity")
+    if "entrant_proof" in receipt:
+        entrant = receipt["entrant_proof"]
+        _require(isinstance(entrant, dict) and set(entrant) == {"kind", "receipt_sha256"} and
+                 entrant["kind"] == "local-witness-v1" and _hash(entrant["receipt_sha256"]),
+                 "Malformed entrant proof identity")
+
+
+def validate_stored_entrant_proof(folder, row, evidence):
+    """Confirm the CI-accepted local witness and its public receipt are both retrievable."""
+    from delta_witness import MAX_PACKED
+    from entrant_proof import check_binary, limited_file, package_bytes, parse_package
+    receipt = limited_file(folder / "entrant-proof.json", 2 * MAX_PACKED)
+    source = (folder / "Entry.lean").read_text(encoding="utf-8")
+    proof = parse_package(receipt, row["hole"], source, evidence["inputs"]["policy_sha256"])
+    _require(hashlib.sha256(package_bytes(proof)).hexdigest() == evidence["entrant_proof"]["receipt_sha256"],
+             "Published entrant receipt differs from the verified local witness")
+    _require(proof["claimed_nodes"] == row["standalone_rh_nodes"], "Entrant witness claims a different proof size")
+    check_binary(proof, limited_file(folder / "entrant.rhproof.gz", MAX_PACKED))

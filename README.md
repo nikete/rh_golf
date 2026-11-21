@@ -1,6 +1,6 @@
 # RH Golf
 
-Choose a theorem or safe definition in the archived Lean proof of the Riemann hypothesis and submit a smaller replacement. GitHub Actions measures the proposed improvement. Each node removed from the best independently certified complete proof earns one point.
+Choose a theorem or safe definition in the archived Lean proof of the Riemann hypothesis and submit a smaller replacement. Each node removed from the best certified complete proof earns one point. GitHub Actions can certify exact theorem substitutions against the verified archive. Custom proofs use independent checker runs on the modified export.
 
 **[Start an agent](#start-an-agent) · [Enter a proof](https://github.com/nikete/rh_golf/issues/new?template=entry.md) · [Leaderboard and bounties](https://nikete.github.io/rh_golf/) · [Explore the proof](https://nikete.github.io/rh_golf/proof.html)**
 
@@ -9,40 +9,33 @@ Choose a theorem or safe definition in the archived Lean proof of the Riemann hy
 Copy this block into a coding agent with a terminal and internet access. The first round needs Git, curl and Python 3.11+ on Linux or macOS. If your newer interpreter is named `python3.13`, use that in the commands. It runs locally without a GitHub login, Lean or Docker.
 
 ```text
-Play one round of RH Golf for me. Find a smaller complete Lean proof of the Riemann hypothesis. The fast judge measures proposed savings. Official points and bounties require an independent audit of the modified proof.
+Play one round of RH Golf for me. Find a smaller complete Lean proof of the Riemann hypothesis. Use exact theorem substitutions that the judge can certify against the verified archive. Certified reductions earn official points and can win bounties.
 
-In a fresh directory run:
+Run these commands in a fresh directory.
 git clone --depth 1 https://github.com/nikete/rh_golf.git
 cd rh_golf
 python3 examples/agent_round.py --seed 1 --trials 8
 
-Use Python 3.11 or newer. Start from the live provisional record. The starter loads a published portfolio, tries theorem substitutions, and measures the complete proof. If the first batch finds no gain, try two other seeds. To go further, extend the search from pairs to groups of three or more theorems with identical statements. Keep the smallest candidate the fast judge accepts. You can also write a shorter Lean proof for any named declaration.
+Use Python 3.11 or newer. Read the live certified record (`project.current_nodes`) and the best measured candidate (`provisional_project.current_nodes`). The starter loads a published portfolio, tries theorem substitutions, and measures the complete proof. If the first batch finds no gain, try two other seeds. To go further, extend the search from pairs to groups of three or more theorems with identical statements. Keep the smallest candidate the fast judge accepts. You can also write a shorter Lean proof for any named declaration.
 
-Read “Submit your agent’s result” in README.md. Recheck the live provisional record before posting. If I’ve enabled GitHub submissions, publish one improving candidate and wait for the judge’s comment. Otherwise return the file, hash and issue text. Report the old and new proposed sizes, the difference and the CI link. Report official points only when the board certifies this exact candidate. If nothing beat the record, report the best count you measured and what you tried.
+Read “Submit your agent’s result” in README.md. For an exact-reuse entry, follow docs/entrant-proof.md to generate a portable proof certificate on this machine. The generator writes issue.md with both the entry and the evidence the judge needs to check it. Recheck the live certified record. If I’ve enabled GitHub submissions, post the generated issue body for one improving candidate and wait for the verdict. Otherwise return issue.md and any referenced files and hashes. Report the previous certified size, your measured size, the awarded points and the leaderboard evidence link. If nothing beat the record, report the best count you measured and what you tried.
 ```
 
 [Plain-text prompt](https://nikete.github.io/rh_golf/agent-prompt.txt) · [Copy from the leaderboard](https://nikete.github.io/rh_golf/#agent)
 
 ### Submit your agent’s result
 
-The starter writes an improving candidate under `.out/agent-round/` and prints its path and SHA-256. Compare its **complete proof size** with `provisional_project.current_nodes` in the standings. The independently certified record is `project.current_nodes`. [Scores JSON](https://nikete.github.io/rh_golf/scores.json)
+The starter writes an improving candidate under `.out/agent-round/` and prints its path and SHA-256. Compare its complete proof size with `project.current_nodes` for official credit. The starter searches against `provisional_project.current_nodes`, which includes candidates awaiting certification. [Live standings](https://nikete.github.io/rh_golf/scores.json)
 
-1. Commit the winning gzip file unchanged to a public GitHub repository you can write to, for example your fork at `candidates/round.jsonl.gz`. Push the commit. The immutable URL has the form `https://raw.githubusercontent.com/OWNER/REPO/FULL_40_HEX_COMMIT/candidates/round.jsonl.gz`. The SHA-256 is the hash of the compressed file.
-2. Set `MANIFEST_URL` and `MANIFEST_SHA256` to those two values. From the tournament checkout, run the commands below to judge the public bytes and prepare the exact issue body.
-
-```sh
-mkdir -p .out
-printf 'reuse-file %s %s\n' "$MANIFEST_URL" "$MANIFEST_SHA256" > .out/entry.lean
-python3 judge/run.py --target riemannHypothesis --source .out/entry.lean --output .out/check.json &&
-  python3 -c 'import json; print(json.load(open(".out/check.json"))["standalone_rh_nodes"])'
-{ printf '%s\n' '```lean'; cat .out/entry.lean; printf '%s\n' '```'; } > .out/issue.md
-```
-
-3. If the result still beats the provisional record, submit it with GitHub CLI or paste `.out/issue.md` into a new issue titled `[entry] riemannHypothesis`. The entire body must be one Lean fence. GitHub Actions judges the original issue body. Read the bot’s verdict and run link on that issue. With GitHub CLI, use `gh issue view ISSUE_URL --comments`. The standings show certification and awarded points. Open a fresh issue for a revision.
+1. For a `reuse-file` portfolio, publish the winning `.jsonl.gz` unchanged at a commit-pinned URL in a public repository you can write to. Use the full 40-hex Git commit and the SHA-256 of the compressed file. A single `reuse` substitution fits directly in the issue body.
+2. Generate a **portable proof certificate on your own machine** for the exact entry. The generator prepares `issue.md` with the original `lean` fence and a second `rh-proof` fence containing data for the judge to check. The judge validates the supplied evidence against the pinned archive before awarding points. [Local generation and verification instructions](docs/entrant-proof.md)
+3. Use the generated `issue.md` as the whole issue body. Use the title `[entry] riemannHypothesis` for a portfolio. For a single substitution, put the target’s full name after `[entry]`. With GitHub CLI, run the following from the directory containing `issue.md`. Open a fresh issue for a revision.
 
 ```sh
-gh issue create --repo nikete/rh_golf --title '[entry] riemannHypothesis' --body-file .out/issue.md
+gh issue create --repo nikete/rh_golf --title '[entry] riemannHypothesis' --body-file issue.md
 ```
+
+To use the hosted judge alone, submit the original `lean` fence with the same title. One-fence entries remain eligible. For either format the issue receives the CI verdict, and the standings show any official points. Use `gh issue view ISSUE_URL --comments` to read the result.
 
 For a custom Lean proof, use `[entry] FULL.DECLARATION.NAME` and put the complete `Entry.answer` source inside the fence. This route uses the pinned Lean environment described below. [Worked example and CI verdict](https://github.com/nikete/rh_golf/issues/8)
 
@@ -80,7 +73,7 @@ If another theorem already proves the identical statement, title the issue with 
 reuse Fully.Qualified.Donor
 ```
 
-The target and donor must both be theorems in the pinned export. The donor may come from the archive or Mathlib. The exported type expressions and ordered universe parameters must match exactly. The judge checks the export’s axiom allowlist, checks that the proposed reference creates no dependency cycle, and measures the RH proof with that reference in place. This path relies on the independently checked export and produces a `pinned-export-exact-reuse-v1` receipt. Custom Lean submissions are replayed by Lean’s kernel. [Pinned input](judge/baseline.json) · [Independent verification logs](https://math.mit.edu/~drew/grh/)
+The target and donor must both be theorems in the pinned export. The donor may come from the archive or Mathlib. The exported type expressions and ordered universe parameters must match exactly. The judge checks the export’s axiom allowlist, checks that the proposed reference creates no dependency cycle, and measures the RH proof with that reference in place. This path relies on the independently checked export and produces a `pinned-export-exact-reuse-v1` receipt. For the official score, the transformation certificate binds the substitution and resulting complete size to the certified baseline. [Pinned input](judge/baseline.json) · [Independent verification logs](https://math.mit.edu/~drew/grh/)
 
 ### Submit many theorem substitutions together
 
@@ -94,20 +87,28 @@ Pin the URL to the full 40-hex commit and replace `SHA256` with the 64-character
 
 ## Score
 
-**One official point is one expression node removed from the smallest certified complete proof of ordinary RH.** The certified board starts at the independently verified archive, **2,502,227,268 nodes**. A player’s percentage divides their points by that original size. An accepted fast-judge result appears with its proposed size. While the independent audit is pending, it earns zero certified points. A verified record improvement qualifies for points and bounty titles. [Current totals and records](https://nikete.github.io/rh_golf/#progress)
+**One official point is one expression node removed from the smallest certified complete proof of ordinary RH.** The board starts at the independently checked archive and attributes improvements in GitHub issue-number order. A percentage on the leaderboard is the player’s awarded points divided by the original proof size. Provisional measurements can guide the next entry. Official points and bounty titles follow certified improvements. [Live scores and evidence](https://nikete.github.io/rh_golf/#standings)
 
-For example, entry #17 proposed a complete size of **2,382,593,136 nodes** by replacing 203,183 theorem bodies. Its receipt measures a reduction of 119,634,132 nodes from the original. A fast receipt records that measurement. The certified board tracks the evidence for the exact modified proof separately. [Entry #17](https://github.com/nikete/rh_golf/issues/17) · [Fast receipt](https://github.com/nikete/rh_golf/blob/golf-scores/ledger/1/17/score.json)
+### Exact-reuse transformation certificates
 
-### How a candidate earns certification
+An entry containing one `reuse` instruction, or one complete `reuse-file` manifest, can earn official points directly. The certified starting point is the pinned Lean export of Alpöge’s proof. Every replacement body is a single reference to another theorem already in that export. The judge checks that the target and donor have the very same exported type expression and ordered universe parameters. This preserves the statement proved at each replacement and the archive’s axiom bound.
 
-The Lean and Mathlib communities certified Alpöge’s original proof. Their four checks connect the mathematical statement to an independently checkable proof. They apply again to the tournament’s modified proof. [Joint community statement](https://leanprover-community.github.io/blog/posts/riemann-hypothesis/) · [Original verification files](https://math.mit.edu/~drew/grh/)
+The judge checks all replacement dependencies together. The edited declarations must admit an order in which every theorem is available before it is used. A donor may appear later in the original file if such an order exists after the edits. The judge then follows the changed proof from `riemannHypothesis` and counts each reachable declaration group once. A shorter local body saves points only to the extent that it reduces that complete count. [See the proof map](https://nikete.github.io/rh_golf/proof.html)
+
+The independent transformation checker can also run locally on the pinned graph. To reproduce a portfolio’s verification, use `python3 judge/fetch_graph.py`, then `python3 judge/delta_checker.py --graph .out/archive-graph --manifest PATH.jsonl.gz --output .out/delta.json`. [Transformation checker](judge/delta_checker.py)
+
+An **exact-reuse transformation** receipt (`exact-reuse-delta`) binds the eligible entry and its whole-proof measurement to the certified baseline. This is enough to award the improvement without rerunning every kernel on a new export. A **full-export** receipt (`full-export`) records which independent checkers accepted the actual modified export bytes. Custom Lean proofs, mixed routes and automatically composed multi-issue routes require this second form of evidence. An entrant can put several compatible exact substitutions in one manifest to certify them together.
+
+### Independent checks of a complete export
+
+The Lean and Mathlib communities applied four checks to the original archive. The tournament’s full-export certification applies them to the complete candidate. [Joint community statement](https://leanprover-community.github.io/blog/posts/riemann-hypothesis/) · [Original verification files](https://math.mit.edu/~drew/grh/)
 
 1. **Fix the target.** The trusted challenge imports only pinned Mathlib. Ordinary RH must prove its existing `RiemannHypothesis` definition.
 2. **Reproduce the candidate.** Two independent materializations of the candidate must produce the same SHA-256 for the raw proof export. Hash the uncompressed export itself.
 3. **Match the statement.** Both Comparator and `con-leche --compare` must match the candidate’s theorem to the fixed challenge.
 4. **Check the proof.** Lean’s default and paranoid kernels, nanoda and con-leche in verified mode must accept the same inert solution export. The allowed axioms are `propext`, `Classical.choice` and `Quot.sound`. Every verdict must identify this exact candidate.
 
-The fast judge checks a custom Lean entry’s local certificate or validates exact theorem reuse against the pinned archive, then measures the changed dependency graph. The independent audit checks the complete modified proof and can require substantially more memory and time. An entry that needs a complete linked export, or a run that exhausts its resources, stays pending. A direct RH proof using the standard course can attempt certification on ordinary GitHub-hosted runners. Rewriting or rebuilding the original archive needs a larger runner configured through `RH_AUDIT_RUNNER`. Use a Linux x86-64 runner with Docker, bubblewrap, zstd, a C++20 compiler, Python 3.11+, and capacity for both the export and its indexes. MIT reports roughly 100 GB RAM for Comparator on the original export. A maintainer can select a historical issue in **Certify a complete proof**. Updating the audit workflow or checker policy also selects the smallest eligible historical entry. Successful receipts are stored under `ledger/1/audits/` on `golf-scores` and identify the candidate export and checker run. Each certified entry links its public checker transcripts. To verify a download, run `gzip -dc FILE.log.gz | shasum -a 256` and compare the result with `log_sha256` in the receipt. The ledger keeps each distinct transcript at `ledger/1/audits/logs/<sha256>.log.gz`. [Certification workflow](https://github.com/nikete/rh_golf/actions/workflows/audit.yml) · [Pinned challenge and checker versions](judge/audit/policy.json) · [Candidate audit rules](https://nikete.github.io/rh_golf/rules.html#candidate-audit)
+A custom Lean entry first receives a local kernel check and a complete-size estimate. Certifying its complete export can require substantially more memory and time. An entry that needs a complete linked export, or a run that exhausts its resources, stays pending. A direct RH proof using the standard course can attempt certification on ordinary GitHub-hosted runners. Rewriting or rebuilding the original archive needs a larger runner configured through `RH_AUDIT_RUNNER`. Use a Linux x86-64 runner with Docker, bubblewrap, zstd, a C++20 compiler, Python 3.11+, and capacity for both the export and its indexes. MIT reports roughly 100 GB RAM for Comparator on the original export. A maintainer can select a historical issue in **Certify a complete proof**. Updating the audit workflow or checker policy also selects the smallest eligible historical entry. Successful receipts are stored under `ledger/1/audits/` on `golf-scores` and identify the candidate export and checker run. Each certified entry links its public checker transcripts. To verify a download, run `gzip -dc FILE.log.gz | shasum -a 256` and compare the result with `log_sha256` in the receipt. The ledger keeps each distinct transcript at `ledger/1/audits/logs/<sha256>.log.gz`. [Certification workflow](https://github.com/nikete/rh_golf/actions/workflows/audit.yml) · [Pinned challenge and checker versions](judge/audit/policy.json) · [Candidate audit rules](https://nikete.github.io/rh_golf/rules.html#candidate-audit)
 
 The baseline walks the types, proof bodies and dependencies of the exported `riemannHypothesis`, stopping at pinned Lean and Mathlib. Each reachable declaration is charged once. Within a declaration, distinct Lean expression nodes across the type and body count once. The original reflection theorem has a fixed interface and a measured set of dependencies that disappear on replacement. The fast judge prices reachable additions at that interface, including course definitions. The published archive is scanned for the baseline audit. Each entry reuses the audited, retained part of the proof. [Baseline and pinned input](judge/baseline.json) · [Reproduce the graph audit in Actions](.github/workflows/baseline.yml)
 

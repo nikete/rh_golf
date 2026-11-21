@@ -41,13 +41,23 @@ def validate_source(text):
     return text.rstrip() + "\n"
 
 
+def issue_blocks(event):
+    body = (event["issue"].get("body") or "").replace("\r\n", "\n").strip()
+    parts = re.split(r"(?<=\n```)[ \t]*\n(?:[ \t]*\n)*[ \t]*```rh-proof[ \t]*\n", body)
+    if len(parts) == 1:
+        return body, None
+    if len(parts) != 2 or not parts[1].endswith("\n```") or len(body.encode()) > 65536:
+        raise Rejected("Use one Lean fence followed by one rh-proof fence.")
+    return parts[0].rstrip(), parts[1][:-4]
+
+
 def event_submission(event):
     issue = event["issue"]
     # Issue author is the GitHub-authenticated entrant. The event snapshot is immutable.
     match = ISSUE_TITLE.fullmatch(issue["title"].strip())
     if not match or not valid_target(match[1] or match[2]):
         raise Rejected("Name the archive declaration in the issue title, e.g. [entry] Formalism.VW.rh_of_right.")
-    block = SOURCE_BLOCK.fullmatch((issue.get("body") or "").replace("\r\n", "\n").strip())
+    block = SOURCE_BLOCK.fullmatch(issue_blocks(event)[0])
     if not block:
         raise Rejected("Put the declarations inside one fenced lean code block.")
     account = issue["user"]["login"]
@@ -291,9 +301,11 @@ def main():
         if not args.event:
             parser.error("--preflight needs --event")
         try:
-            _, src, _ = event_submission(json.loads(args.event.read_text()))
+            event = json.loads(args.event.read_text())
+            _, src, _ = event_submission(event)
             _, body = directives(src)
-            needs_lean = REUSE.fullmatch(body) is None and not body.startswith("reuse-file")
+            needs_lean = (issue_blocks(event)[1] is None
+                          and REUSE.fullmatch(body) is None and not body.startswith("reuse-file"))
         except Rejected:
             needs_lean = False
         print("needs_lean=" + str(needs_lean).lower())
@@ -305,7 +317,8 @@ def main():
         if args.event:
             if args.reference:
                 parser.error("Public entries always use the sandbox.")
-            hole, src, author = event_submission(json.loads(args.event.read_text()))
+            event = json.loads(args.event.read_text())
+            hole, src, author = event_submission(event)
         else:
             if not args.source or not args.hole:
                 parser.error("--target and --source are required for a local entry")
@@ -314,8 +327,13 @@ def main():
                 path = next((h.get("example") for h in CONFIG if h["id"] == hole), None)
                 if not path or args.source.resolve() != (ROOT / path).resolve():
                     parser.error("--reference only accepts the checked-in example for this hole")
-        result = {"status": "accepted", "hole": hole, "season": SEASON, **judge(hole, src, args.reference, args.certificate_output)}
-    except Rejected as exc:
+        proof = issue_blocks(event)[1] if args.event else None
+        if proof is None:
+            result = {"status": "accepted", "hole": hole, "season": SEASON, **judge(hole, src, args.reference, args.certificate_output)}
+        else:
+            from entrant_proof import receive
+            result = receive(proof, hole, src, args.output.parent)
+    except (Rejected, ValueError) as exc:
         result = {"status": "rejected", "reason": " ".join(str(exc).split())[-1000:]}
     except (RuntimeError, subprocess.SubprocessError, OSError) as exc:
         if not args.event:

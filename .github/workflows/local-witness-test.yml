@@ -1,0 +1,55 @@
+name: Test an entrant's local proof
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/local-witness-test.yml'
+      - 'tests/entrant_roundtrip.py'
+      - 'docs/examples/17/**'
+      - 'judge/entrant_proof.py'
+      - 'judge/delta*.py'
+      - 'judge/delta_policy.json'
+      - 'judge/run.py'
+      - 'judge/post.py'
+permissions:
+  contents: read
+
+jobs:
+  entrant:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          persist-credentials: false
+      - name: Generate an issue from the original entry 17 portfolio
+        run: |
+          python3 judge/fetch_graph.py
+          mkdir -p .out
+          url=https://raw.githubusercontent.com/nikete/rh_golf/984b783cefabd615a7d833c7a04d0e7184e2e71e/candidates/earlier-theorems.jsonl.gz
+          curl --fail --location --retry 3 --silent --show-error "$url" -o .out/earlier-theorems.jsonl.gz
+          printf 'reuse-file %s %s\n' "$url" b21a998d186e8d4417d4fa4cdf5554fcb77076f5dbd445507136c5ca358d4ab7 > .out/Entry.lean
+          python3 judge/entrant_proof.py make --target riemannHypothesis --source .out/Entry.lean --manifest .out/earlier-theorems.jsonl.gz --output .out/local
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: entrant-issue
+          path: .out/local/issue.md
+          if-no-files-found: error
+          include-hidden-files: true
+          retention-days: 1
+
+  receiver:
+    needs: entrant
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: entrant-issue
+          path: .out/incoming
+      - name: Judge and score the issue in a temporary ledger
+        run: |
+          python3 judge/fetch_graph.py
+          python3 tests/entrant_roundtrip.py .out/incoming/issue.md

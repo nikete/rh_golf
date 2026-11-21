@@ -1,0 +1,65 @@
+name: Certify theorem substitutions
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/check-deltas.yml'
+      - 'judge/delta*.py'
+      - 'judge/delta_policy.json'
+  workflow_dispatch:
+    inputs:
+      issue:
+        description: Optional historical issue number, or leave empty to check all
+        required: false
+        type: string
+  workflow_run:
+    workflows: ["Judge a proof"]
+    types: [completed]
+permissions: {}
+jobs:
+  verify:
+    if: github.ref == 'refs/heads/main' && (github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'issues'))
+    permissions:
+      contents: read
+    runs-on: ubuntu-24.04
+    outputs:
+      count: ${{ steps.check.outputs.verified_count }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          persist-credentials: false
+      - id: check
+        env:
+          ISSUE: ${{ inputs.issue }}
+          ORIGIN_RUN: ${{ github.event.workflow_run.id }}
+        run: |
+          remote=$(git ls-remote --heads origin refs/heads/golf-scores)
+          mkdir -p ledger
+          if [[ -n "$remote" ]]; then
+            git fetch --quiet --depth=1 origin refs/heads/golf-scores
+            git archive FETCH_HEAD ledger | tar xf -
+          fi
+          if [[ -n "$ISSUE" ]]; then selection=(--issue "$ISSUE")
+          elif [[ -n "$ORIGIN_RUN" ]]; then selection=(--run "$ORIGIN_RUN")
+          else selection=(--backfill)
+          fi
+          python3 judge/delta_entry.py check --ledger ledger --graph .out/archive-graph --output .out/deltas "${selection[@]}"
+      - if: steps.check.outputs.verified_count != '0'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: verified-deltas
+          path: .out/deltas/checked.json
+          if-no-files-found: error
+  record:
+    needs: verify
+    if: needs.verify.outputs.count != '0'
+    permissions:
+      contents: write
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: verified-deltas
+          path: .out/deltas
+      - run: python3 judge/delta_entry.py record --input .out/deltas

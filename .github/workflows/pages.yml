@@ -1,7 +1,7 @@
 name: Publish standings
 on:
   workflow_run:
-    workflows: ["Judge a proof", "Certify a complete proof"]
+    workflows: ["Judge a proof", "Certify a complete proof", "Certify theorem substitutions"]
     types: [completed]
   workflow_dispatch:
   push:
@@ -13,7 +13,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   render:
-    if: github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && (github.event.workflow_run.event == 'issues' || github.event.workflow_run.name == 'Certify a complete proof'))
+    if: github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && (github.event.workflow_run.event == 'issues' || contains(fromJSON('["Certify a complete proof","Certify theorem substitutions"]'), github.event.workflow_run.name)))
     runs-on: ubuntu-24.04
     permissions:
       contents: write

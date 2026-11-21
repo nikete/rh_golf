@@ -21,12 +21,15 @@ jobs:
         if: steps.entry.outputs.needs_lean == 'true'
       - if: steps.entry.outputs.needs_lean == 'true'
         run: docker pull "$(cat judge/image.txt)"
-      - name: Compile, replay and measure
+      - name: Check the submitted proof or entrant-generated mathematical witness
         run: python3 judge/run.py --event "$GITHUB_EVENT_PATH" --output .out/receipt.json
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: receipt
-          path: .out/receipt.json
+          path: |
+            .out/receipt.json
+            .out/witness-result.json
+            .out/entrant.rhproof.gz
           if-no-files-found: error
   verification_interrupted:
     needs: judge
@@ -75,16 +78,22 @@ jobs:
               entry = next(row for row in board["accepted"] if row["issue"] == issue)
               project = board["provisional_project"]
               gain = entry["provisional_points"]
-              summary = (f"**Measured; full-proof audit pending.** Target `{r['hole']}`. "
+              summary = (f"**Measured.** Target `{r['hole']}`. "
                          f"Provisional improvement: **{gain:,} nodes** in this snapshot.")
               if "standalone_rh_nodes" in r:
                   summary += f" Standalone RH proof: **{r['standalone_rh_nodes']:,} nodes**."
+              if pathlib.Path(".out/witness-result.json").is_file() and any(
+                      a["verification_kind"] == "exact-reuse-delta" and issue in a["entries"]
+                      for a in board["project"]["audits"]):
+                  summary = (f"**Entrant-generated proof verified.** Target `{r['hole']}`. "
+                             f"Certified complete RH size: **{r['standalone_rh_nodes']:,} nodes**. "
+                             f"Points in this snapshot: **{entry['points']:,}**.")
               warning = project.get("bundle_warnings", {}).get(str(issue))
               if warning:
                   summary += f" Optional combination skipped in this snapshot: {warning}."
               owner, repo = os.environ["GITHUB_REPOSITORY"].split("/")
               summary += (f" [Certified records and pending measurements](https://{owner}.github.io/{repo}/). "
-                          "Points are awarded when independent checkers certify the complete replacement proof.")
+                          "The standings show certified points and the verification method.")
           elif r["status"] == "unverified":
               summary = "Verification could not finish on this runner. The entry can be retried.\n\n" + r["reason"]
           else:

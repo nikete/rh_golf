@@ -53,6 +53,10 @@ def chosen(rows):
     return list(best.values())
 
 
+VERIFICATION_LABELS = {"exact-reuse-delta": "Exact-reuse transformation", "full-export": "Full export audit",
+                       "original-archive": "Original archive"}
+
+
 def rank_targets(rows, refs, credits):
     pars = {hole: size for hole, r in refs.items() if (size := record_size(r)) is not None}
     hole_credits = defaultdict(int)
@@ -80,11 +84,32 @@ def rank_targets(rows, refs, credits):
 def standings(rows, refs, baseline, graph=None, *, audit_dir=None):
     """Official results concern complete RH routes with independent evidence."""
     project, credits = score_project(rows, refs, baseline, graph, audit_dir=audit_dir)
-    covered = {i for a in project["audits"] for i in a["entries"]}
-    _, _, leaders = rank_targets([r for r in rows if r["issue"] in covered], {}, credits)
+    covered = defaultdict(list)
+    for audit in project["audits"]:
+        for issue in audit["entries"]:
+            covered[issue].append({k: audit[k] for k in ("verification_kind", "evidence_url", "route", "entries")})
+    personal_evidence = defaultdict(list)
+    player_evidence = defaultdict(list)
+    by_issue = {r["issue"]: r for r in rows}
+    for event in project["history"]:
+        for issue, amount in event["credits"].items():
+            if amount:
+                row = by_issue[issue]
+                evidence = {k: event[k] for k in ("verification_kind", "evidence_url")}
+                award = {**evidence, "issue": issue, "points": amount}
+                player_evidence[row["author"].lower()].append(award)
+                personal_evidence[row["author"].lower(), target_key(row["hole"])].append(award)
+    certified = [dict(r, verification=covered[r["issue"]]) for r in rows if r["issue"] in covered]
+    _, _, leaders = rank_targets(certified, {}, credits)
+    for player in leaders:
+        player["points_evidence"] = player_evidence[player["author"].lower()]
     singletons = {a["entries"][0] for a in project["audits"] if len(a["entries"]) == 1 and not a["course_reflection"]}
-    roots = [r for r in rows if r["issue"] in singletons and target_key(r["hole"]) == "riemann"]
+    roots = [r for r in certified if r["issue"] in singletons and target_key(r["hole"]) == "riemann"]
     _, root_bests, _ = rank_targets(roots, {}, credits)
+    for hole, bests in root_bests.items():
+        for r in bests:
+            r["points_evidence"] = personal_evidence[r["author"].lower(), hole]
+            r["points"] = sum(a["points"] for a in r["points_evidence"])
     return {"riemann": project["current_nodes"]}, root_bests, leaders, project, credits
 
 
@@ -217,14 +242,20 @@ def render(ledger, output):
     transcript_links = {}
     for audit in project["audits"]:
         subject = audit["subject_id"]
-        receipt = json.loads((audit_dir / f"{subject}.json").read_text())
-        checkers = defaultdict(list)
-        for checker, result in receipt["checker_receipt"]["checks"].items():
-            checkers[result["log_sha256"]].append(CHECKER_LABELS[checker])
-        transcript_links[subject] = [
-            link(f"https://raw.githubusercontent.com/{REPO}/golf-scores/ledger/{SEASON}/audits/logs/{digest}.log.gz",
-                 " / ".join(names) + " log")
-            for digest, names in checkers.items() if (audit_dir / "logs" / f"{digest}.log.gz").is_file()]
+        if "entrant_proof" in audit:
+            issue, = audit["entries"]
+            base = f"https://raw.githubusercontent.com/{REPO}/golf-scores/ledger/{SEASON}/{issue}"
+            audit["entrant_proof_url"] = base + "/entrant-proof.json"
+            audit["witness_url"] = base + "/entrant.rhproof.gz"
+        if audit["verification_kind"] == "full-export":
+            receipt = json.loads((audit_dir / f"{subject}.json").read_text())
+            checkers = defaultdict(list)
+            for checker, label in CHECKER_LABELS.items():
+                checkers[receipt["checker_receipt"]["checks"][checker]["log_sha256"]].append(label)
+            transcript_links[subject] = [
+                link(f"https://raw.githubusercontent.com/{REPO}/golf-scores/ledger/{SEASON}/audits/logs/{digest}.log.gz",
+                     " / ".join(names) + " log")
+                for digest, names in checkers.items() if (audit_dir / "logs" / f"{digest}.log.gz").is_file()]
         for issue in audit["entries"]:
             audits_for[issue].append(audit)
     for r in rows:
@@ -232,7 +263,11 @@ def render(ledger, output):
         r["points"] = credits.get(issue, 0)
         r["provisional_points"] = estimates.get(issue, 0)
         r["audit_status"] = "certified-route" if issue in audits_for else "pending"
-        r["audit_subjects"] = [a["subject_id"] for a in audits_for[issue]]
+        r["audit_subjects"] = sorted({a["subject_id"] for a in audits_for[issue]})
+        r["verification"] = [{k: a[k] for k in ("verification_kind", "evidence_url", "route", "entries")}
+                             for a in audits_for[issue]]
+        r["points_evidence"] = [{"points": h["credits"][issue], "verification_kind": h["verification_kind"],
+                                 "evidence_url": h["evidence_url"]} for h in project["history"] if h["credits"].get(issue)]
     output.mkdir(parents=True, exist_ok=True)
     for file in ("style.css", "identity.svg", "critical-strip.svg", "copy-prompt.js"):
         shutil.copyfile(ROOT / "site" / file, output / file)
@@ -304,9 +339,13 @@ def render(ledger, output):
             receipt = link(run_url(row), "Export receipt" if reuse else "CI receipt")
         links = [source, receipt]
         for audit in audits_for[issue]:
-            links.append(link(f"audits/{audit['subject_id']}.json", "Route audit"))
-            links.append(link(run_url(audit), "Audit job"))
-            links.extend(transcript_links[audit["subject_id"]])
+            links.append(link(audit["evidence_url"], VERIFICATION_LABELS[audit["verification_kind"]]))
+            links.append(link(run_url(audit), "Verification job"))
+            if "entrant_proof" in audit:
+                links.append(link(audit["entrant_proof_url"], "Entrant proof receipt"))
+                links.append(link(audit["witness_url"], "Download witness"))
+            if audit["verification_kind"] == "full-export":
+                links.extend(transcript_links[audit["subject_id"]])
         return " · ".join(links)
 
     def accepted_entry(row):
@@ -322,29 +361,32 @@ def render(ledger, output):
             target += "<br><small>Reuses " + esc(row["reuse_donor"]) + "</small>"
         return [link(f"{GITHUB}/issues/{issue}", f"#{issue}"), target, player(row), local_size,
                 standalone_cell(row), fmt(row["provisional_points"]), fmt(row["points"]),
-                "Certified route" if row["audit_status"] == "certified-route" else "Pending", evidence_links(row)]
+                " / ".join(dict.fromkeys(VERIFICATION_LABELS[v["verification_kind"]]
+                                         + (" (standalone)" if row.get("combine") and v["verification_kind"] == "exact-reuse-delta" else "")
+                                         for v in row["verification"])) or "Pending", evidence_links(row)]
 
-    entries_table = elem_table(["Entry", "Target", "Player", "Local nodes", "Estimated nodes saved alone", "Provisional points", "Certified points", "Audit", "Evidence"],
+    entries_table = elem_table(["Entry", "Target", "Player", "Local nodes", "Estimated nodes saved alone", "Provisional points", "Certified points", "Verification", "Evidence"],
         [accepted_entry(r) for r in sorted(rows, key=lambda r: r["issue"], reverse=True)],
         "The first accepted replacement will appear here.")
     pct = 100 * project["saved_nodes"] / project["archive_nodes"]
     total_panel = f"""<section id='progress'><div class='sectionhead'><h2>Certified whole-proof progress</h2>
       {link(GITHUB + '/blob/main/judge/baseline.json', 'Baseline receipt ↗')} ·
-      {link(GITHUB + '/blob/main/judge/audit/policy.json', 'Independent check policy ↗')}</div>
+      {link('rules.html#transformations', 'How certification works →')}</div>
       <div class='footprints'><div><small>Original ordinary RH</small><strong>{fmt(project['archive_nodes'])}</strong></div>
       <div><small>Certified complete proof</small><strong>{fmt(project['current_nodes'])}</strong></div>
       <div><small>Nodes removed</small><strong>{fmt(project['saved_nodes'])}</strong></div></div>
       <p>{pct:.8f}% of the original proof. The opening reference saved {fmt(project['course_saved_nodes'])} nodes.
       Players have contributed {fmt(project['community_saved_nodes'])} more.</p>
       <p>The best provisional measurement is <strong>{fmt(measured['current_nodes'])} nodes</strong>.
-      Proposed routes earn points after independent checks of the exact complete proof.</p></section>"""
+      Exact theorem substitutions can earn points through a transformation certificate. Custom and mixed proofs earn points after full-export verification.</p></section>"""
     accounts = {r["issue"]: r["author"] for r in rows}
     changes = []
     for h in reversed(project["history"]):
         credit_links = [link(f"{GITHUB}/issues/{i}", f"@{accounts[i]} · {fmt(amount)}")
                         for i, amount in h["credits"].items()]
         changes.append([link(f"{GITHUB}/issues/{h['issue']}", f"#{h['issue']}"),
-                        esc(target_names[h["issue"]]), fmt(h["before_nodes"]), fmt(h["after_nodes"]), ", ".join(credit_links)])
+                        esc(target_names[h["issue"]]), fmt(h["before_nodes"]), fmt(h["after_nodes"]), ", ".join(credit_links),
+                        link(h["evidence_url"], VERIFICATION_LABELS[h["verification_kind"]])])
     bounty_rows = []
     project["bounties"] = []
     for issue, name, denominator, percent in (
@@ -355,18 +397,19 @@ def render(ledger, output):
         limit = project["archive_nodes"] - required
         first = next((event for event in project["history"] if event["after_nodes"] <= limit), None)
         winners = first["entries"] if first else ()
-        project["bounties"].append(dict(name=name, required_saved_nodes=required, winning_issues=winners))
+        evidence = {k: first[k] for k in ("verification_kind", "evidence_url")} if first else {}
+        project["bounties"].append(dict(name=name, required_saved_nodes=required, winning_issues=winners, **evidence))
         status = ", ".join(link(f"{GITHUB}/issues/{i}", "@" + accounts[i]) for i in winners)
         bounty_rows.append([link(f"{GITHUB}/issues/{issue}", name), percent, fmt(required),
                             status or f"{fmt(project['current_nodes'] - limit)} nodes to go"])
-    bounties = "<section id='bounties'><h2>Open proof bounties</h2><p>Earn a title for the first complete proof to cross each threshold. Winning partners share the title. All awards are recognition only.</p>" + elem_table(
+    bounties = "<section id='bounties'><h2>Open proof bounties</h2><p>Earn a title for the first certified complete proof to cross each threshold. Winning partners share the title. All awards are recognition only.</p>" + elem_table(
         ["Title", "Cut", "Total nodes saved to qualify", "Progress"], bounty_rows, "") + "</section>"
     history_table = ""
     if changes:
         history_table = "<h3>Record improvements</h3>" + elem_table(
-            ["Entry", "Target", "Before", "After", "Credit"], changes, "")
+            ["Entry", "Target", "Before", "After", "Credit", "Verification"], changes, "")
     if project["pending_issues"]:
-        history_table += "<p>Entries awaiting an independent complete-route audit: " + ", ".join(
+        history_table += "<p>Entries waiting for certification include " + ", ".join(
             link(f"{GITHUB}/issues/{i}", f"#{i}") for i in project["pending_issues"]) + ".</p>"
     readme = (ROOT / "README.md").read_text()
     section = readme.split("## Start an agent\n", 1)[1].split("\n## ", 1)[0]
@@ -374,7 +417,7 @@ def render(ledger, output):
     (output / "agent-prompt.txt").write_text(prompt + "\n")
     page("index.html", "RH Golf · Riemann proof league", f"""
     <section class='hero'><div class='herocopy'>
-    <h1>Riemann<br><em>Proof Golf</em></h1><p class='intro'>Shrink a theorem or definition anywhere in the Lean proof of the Riemann hypothesis. Each node removed from the independently certified complete proof earns one point.</p>
+    <h1>Riemann<br><em>Proof Golf</em></h1><p class='intro'>Shrink a theorem or definition anywhere in the Lean proof of the Riemann hypothesis. Earn one point per node removed from the certified complete proof.</p>
     <div class='buttons'><a class='primary' href='{entry_url}'>Submit a replacement ↗</a>
     <a class='plain' href='#agent'>Play with an agent →</a></div></div>
     <figure><img src='critical-strip.svg' width='530' height='322' alt='The critical line at real part one half, with the first three positive zeta zero heights marked.'>
@@ -396,8 +439,8 @@ def render(ledger, output):
     To replace the entire proof, use <b>[entry] riemannHypothesis</b> and prove Mathlib’s <b>RiemannHypothesis</b>.</p>
     <p>Found an existing theorem with the exact same statement and universe parameters? Put one line in the Lean fence that names the donor.</p>
     <pre>reuse Fully.Qualified.Donor</pre>
-    <p>The judge checks the two statements against the pinned export and scores the donor’s reachable dependencies. To try your entry with earlier accepted replacements, add a first line such as <b>-- combine: #1 #7</b>. <a href='rules.html#reuse'>Exact reuse rules →</a></p>
-    <p>To submit many substitutions together, target <b>riemannHypothesis</b> and use <b>reuse-file</b> with a pinned manifest. <a href='rules.html#combinations'>Portfolio format →</a></p>
+    <p>The judge can certify this substitution against the original archive and award points for a smaller complete proof. <a href='rules.html#reuse'>Exact reuse rules →</a></p>
+    <p>For a portfolio, target <b>riemannHypothesis</b> and use <b>reuse-file</b> with a pinned manifest. Generate a portable certificate on your own machine and submit the resulting <b>issue.md</b>. <a href='{GITHUB}/blob/main/docs/entrant-proof.md'>Generate an entry with evidence ↗</a> · <a href='rules.html#combinations'>Portfolio format →</a></p>
     <div class='buttons'><a class='primary' href='{entry_url}'>Open an entry ↗</a><a class='plain' href='rules.html'>Submission rules →</a></div></section>
     <section id='large-targets'><h2>Two large proofs to shrink</h2>
     <p>Ordinary RH uses both declarations. Each count measures the original declaration’s type and proof body.
@@ -405,7 +448,7 @@ def render(ledger, output):
     <p>Copy a declaration name into your issue title after <b>[entry]</b>. These modules have large import trees. Building one from scratch can exceed the hosted runner’s time or memory limit. <a href='rules.html'>Entry limits →</a></p></section>
     <section id='standings'><div class='sectionhead'><h2>Certified leaderboard</h2><span>{len(leaders)} players</span></div>
     {leaderboard}{history_table}</section>
-    <section id='entries'><div class='sectionhead'><h2>Submissions and audits</h2><span>{len(rows)} proofs</span></div><p>Provisional measurements and their historical point estimates remain available while the complete proofs await independent checks. Certified points follow the audited record in issue order.</p>{entries_table}</section>""")
+    <section id='entries'><div class='sectionhead'><h2>Submissions and verification</h2><span>{len(rows)} proofs</span></div><p>The evidence identifies how each entry was checked. A verified exact-reuse transformation or a verified full export can earn certified points. Provisional measurements stay available for comparison.</p>{entries_table}</section>""")
     for h in CONFIG:
         k = h["id"]
         size_key = "complete_rh_nodes" if k == "riemann" else "nodes"
@@ -447,18 +490,19 @@ def render(ledger, output):
     proofs.mkdir(exist_ok=True)
     for r in rows:
         shutil.copyfile(ledger / SEASON / str(r["issue"]) / "Entry.lean", proofs / f"{r['issue']}.lean")
-    audit_output = output / "audits"
-    audit_output.mkdir(exist_ok=True)
-    valid_subjects = {a["subject_id"] for a in project["audits"]}
-    for stale in audit_output.glob("*.json"):
-        if stale.stem not in valid_subjects:
-            stale.unlink()
-    for audit in project["audits"]:
-        name = audit["subject_id"] + ".json"
-        shutil.copyfile(audit_dir / name, audit_output / name)
+    for folder in ("audits", "deltas"):
+        destination = output / folder
+        destination.mkdir(exist_ok=True)
+        verified = {Path(a["evidence_url"]).name for a in project["audits"] if Path(a["evidence_url"]).parent.name == folder}
+        for stale in destination.glob("*.json"):
+            if stale.name not in verified:
+                stale.unlink()
+        for name in sorted(verified):
+            shutil.copyfile(ledger / SEASON / folder / name, destination / name)
     (output / "scores.json").write_text(json.dumps({"season": SEASON, "course_commit": os.getenv("COURSE_COMMIT"), "project": project,
         "holes": CONFIG, "references": refs,
-        "records": official_records, "personal_bests": dict(official_bests), "players": leaders,
+        "records": official_records, "record_verification": {"riemann": {k: project[k] for k in ("verification_kind", "evidence_url")}},
+        "personal_bests": dict(official_bests), "players": leaders,
         "provisional_project": measured, "provisional_records": pars, "provisional_personal_bests": dict(holes),
         "pending": project["pending_issues"], "accepted": rows}, indent=2) + "\n")
 

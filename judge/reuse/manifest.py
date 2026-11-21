@@ -20,19 +20,19 @@ MAX_LINE = 64 << 10
 PREFIX = "https://raw.githubusercontent.com/"
 
 
-def validate_url(url):
+def validate_url(url, *, suffix=".jsonl.gz"):
     if not isinstance(url, str) or not url.startswith(PREFIX) or len(url) > 2048:
         raise ValueError("Use an HTTPS raw.githubusercontent.com URL pinned to a full commit SHA")
     parts = url[len(PREFIX):].split("/")
     if len(parts) < 4:
-        raise ValueError("Expected an owner, repository, full commit SHA and .jsonl.gz file path")
+        raise ValueError(f"Expected an owner, repository, full commit SHA and {suffix} file path")
     owner, repo, commit, *path = parts
     if (not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9-]{0,38}", owner)
             or not re.fullmatch(r"[A-Za-z0-9_.-]{1,100}", repo) or repo in (".", "..")
             or not re.fullmatch(r"[A-Fa-f0-9]{40}", commit)
             or any(not re.fullmatch(r"[A-Za-z0-9_.-]{1,255}", item) or item in (".", "..") for item in path)
-            or not path[-1].endswith(".jsonl.gz")):
-        raise ValueError("Invalid pinned GitHub manifest URL or .jsonl.gz file path")
+            or not path[-1].endswith(suffix)):
+        raise ValueError(f"Invalid pinned GitHub URL or {suffix} file path")
     return url
 
 
@@ -90,6 +90,11 @@ def fetch_pairs(url, sha256):
     if not isinstance(sha256, str) or not re.fullmatch(r"[a-fA-F0-9]{64}", sha256):
         raise ValueError("Supply the full SHA-256 digest of the compressed manifest")
     payload = _download(url)
+    yield from read_pairs(payload, sha256)
+
+
+def read_pairs(payload, sha256):
+    """Check the compressed bytes and parse the same pair grammar for local and remote files."""
     if hashlib.sha256(payload.getbuffer()).hexdigest() != sha256.lower():
         raise ValueError("Compressed manifest SHA-256 does not match the submitted digest")
     payload.seek(0)

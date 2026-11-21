@@ -1,8 +1,12 @@
 <section class="inner"><a class="back" href="index.html">← Leaderboard</a><h1>Scoring rules</h1>
 <h2>One point per node removed from RH</h2>
-<p>The certified record starts at the original ordinary RH proof. Each node removed from that record by an independently audited complete proof earns one official point. A player’s percentage is their points divided by the original size. Certification also governs the bounty titles.</p>
-<p>The fast judge measures proposed reductions so other entrants can build on them. Pending candidates have zero certified points. Entry #17, for example, measured 119,634,132 fewer nodes than the original. Its fast receipt identifies the manifest and the graph calculation. <a href="{{REPO}}/blob/golf-scores/ledger/1/17/score.json">Read the receipt ↗</a></p>
-<h2 id="candidate-audit">Four checks for the modified proof</h2>
+<p>One node removed from the smallest certified complete proof earns one official point. The starting record is the independently checked archive. The leaderboard replays certified improvements in issue-number order. The same record determines bounty titles. <a href="index.html#standings">See the official record →</a></p>
+<h2 id="transformations">Certify exact theorem substitutions</h2>
+<p>Submit one <b>reuse</b> instruction or one complete <b>reuse-file</b> manifest. The judge checks the transformation against the certified baseline. Each new theorem body must be a reference to an existing theorem with exactly the same exported statement and ordered universe parameters.</p>
+<p>The transformed declarations must admit an order in which every dependency is available before it is used. A donor may have appeared later in the original export. The judge then counts every group reachable from <b>riemannHypothesis</b> once. This verifies the complete size, even when two substitutions share a donor or remove the last uses of a large dependency. If the certified size beats the record, the entrant earns points without a new replay of the complete export.</p>
+<p>Generate the portable certificate on your own machine and submit the resulting <b>issue.md</b>. It includes the usual <b>lean</b> fence and a second <b>rh-proof</b> fence containing evidence for the judge to validate against the pinned archive. You can also submit the original Lean fence alone and let the hosted judge perform the checks. <a href="{{REPO}}/blob/main/docs/entrant-proof.md">Generate the certificate and issue body ↗</a></p>
+<h2 id="candidate-audit">Independent replay of a complete export</h2>
+<p>Custom Lean proofs, mixed routes and combinations of separate issues need a full-export certificate to earn official points. A local kernel receipt or a graph measurement leaves the result provisional. The following four checks apply to the complete modified export.</p>
 <ol><li><b>Choose the correct theorem.</b> The fixed challenge imports only pinned Mathlib and asks for its <b>RiemannHypothesis</b>.</li>
 <li><b>Reproduce the result.</b> Independently materialize the same candidate twice. The two uncompressed proof exports must have identical SHA-256 digests.</li>
 <li><b>Compare the statements.</b> Comparator and <b>con-leche --compare</b> must both match the modified solution’s theorem to the fixed challenge.</li>
@@ -16,7 +20,7 @@
 <h2 id="reuse">Reuse an existing theorem</h2>
 <p>Use the target’s full name in the issue title. If an existing archive or Mathlib theorem proves the identical statement, the entire contents of the <b>lean</b> fence can be one line.</p>
 <code>reuse Fully.Qualified.Donor</code>
-<p>Both theorems must occur in the pinned Lean export with the same type expression and the same ordered universe parameters. The judge replaces the original proof body with a reference to the donor, checks the export’s axiom allowlist and rejects dependency cycles. It then measures the complete RH proof, including any new archive dependencies. The <b>pinned-export-exact-reuse-v1</b> receipt records an exact match against the independently verified export. Custom Lean submissions get a fresh kernel replay. <a href="https://math.mit.edu/~drew/grh/">Export and independent verification logs ↗</a></p>
+<p>The <b>pinned-export-exact-reuse-v1</b> submission receipt records a matching donor from the pinned archive or Mathlib. The official evidence for this route is labeled <b>exact-reuse transformation</b>. It certifies the edit, its compatibility with the archive’s axiom bound and its whole-proof cost. <a href="https://math.mit.edu/~drew/grh/">Export and independent verification logs ↗</a></p>
 <h2 id="combinations">Try replacements together</h2>
 <p>To enter a complete portfolio, title the issue <b>[entry] riemannHypothesis</b> and put one line in its Lean fence.</p>
 <code>reuse-file https://raw.githubusercontent.com/OWNER/REPO/40_HEX_COMMIT/PATH.jsonl.gz SHA256</code>

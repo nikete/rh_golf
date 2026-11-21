@@ -46,12 +46,17 @@ jobs:
           else args=(--best)
           fi
           python3 judge/audit/candidate.py select --ledger ledger "${args[@]}"
-          if [[ -z "$FULL_RUNNER" ]] && ! grep -qx hosted=true "$GITHUB_OUTPUT"; then
+          if grep -Eq '^method=(portfolio|reuse)$' "$GITHUB_OUTPUT" && [[ "$GITHUB_EVENT_NAME" != workflow_dispatch ]]; then
+            echo "The exact-reuse path handles this submission. A separate whole-export replay is available by manual dispatch." >> "$GITHUB_STEP_SUMMARY"
+          elif [[ -z "$FULL_RUNNER" ]] && ! grep -qx hosted=true "$GITHUB_OUTPUT"; then
             echo "Pending independent audit. No full-export runner is configured." >> "$GITHUB_STEP_SUMMARY"
           fi
   reproduce:
     needs: select
-    if: needs.select.outputs.state == 'ready' && (needs.select.outputs.hosted == 'true' || vars.RH_AUDIT_RUNNER != '')
+    if: >-
+      needs.select.outputs.state == 'ready' &&
+      (github.event_name == 'workflow_dispatch' || !contains(fromJSON('["reuse","portfolio"]'), needs.select.outputs.method)) &&
+      (needs.select.outputs.hosted == 'true' || vars.RH_AUDIT_RUNNER != '')
     runs-on: ${{ vars.RH_AUDIT_RUNNER || 'ubuntu-24.04' }}
     timeout-minutes: 2880
     strategy:

@@ -1,0 +1,64 @@
+{
+  "schema": 1,
+  "root": "riemannHypothesis",
+  "upstream": {
+    "raw_sha256": "5ea74b912147c5c93cc2b6d70cc727cf908df2f62ac6a20480a3fa02f6be244e",
+    "checksums_url": "https://math.mit.edu/~drew/grh/SHA256SUMS",
+    "original_export_checks": {
+      "nanoda.log": "d4c5360b02d8dd885150c1cc28b616cb6fb5bf5b20d142558d79a7b15ae9d9df",
+      "con-leche-master.log": "23e27eacb9e8378569474cc185c0e98f6b995b4db0f8df88fd48a921084fed02",
+      "con-leche-compare.log": "5a068bf55f24904eea9f05eda947c63d43bdee3c6ab0490e43943a3bd9af1f6e"
+    },
+    "reference_sha256": "bd484ac9886a96f26b1d9a7a59ebd45b7a70d102c015d4f31f9302bbdd6ab2b9",
+    "raw_bytes": 61570595788,
+    "compressed_bytes": 7699933588
+  },
+  "graph_and_signatures_reproduction": {
+    "run": "https://github.com/nikete/rh_golf/actions/runs/44949048797",
+    "revision": "cbd8e6acbc26ba950779e78a17bd4b1932cc3dd5",
+    "measure_job": 136983115555
+  },
+  "boundary": {
+    "archive_theorems": 351817,
+    "distinct_statement_roots": 91578,
+    "library_decl_groups": 209514,
+    "library_expression_roots": 381292,
+    "library_theorems": 13073,
+    "library_to_archive_edges": 0
+  },
+  "source_files": {
+    "judge/baseline.json": "12e3083b74070eff6707151a7c924006e6d581342f1c3c3f8fc6b3c2abed7d58",
+    "judge/archive_graph.lock.json": "7af1330fda5dda55fd31f31a576c2af9f91043f061045e57ba98b5507b744714",
+    "judge/reuse/index.lock.json": "05de6edb3ad71a71a63062bc9cfaed948a66988c55d07547359bd9b7bdbb7658",
+    "judge/baseline/LibraryNames.lean": "8ca26b6ff3c93eb98d40918545deb8189bf3e69b32f0f22ed69caeed9cfb1127",
+    "judge/baseline/blocks.hpp": "d66e637fafb8b89dc0d5d4e24727ebd7f0534ecbe51426743572bad207f485ef",
+    "judge/baseline/catalog.py": "26f204a2f53d41ea110898dbf51b9ebbfac0cc56bbed55443b6f61a95e95204f",
+    "judge/baseline/graph_assets.py": "bab1ee363e3449da1a9fa2e325dfd8cabd612749349b126ea16246f94643ae05",
+    "judge/baseline/index.cpp": "90bce5cf72bdcaf2aa259f1dffaaf2cacf4645a9d6f01bbc519923482bc371fa",
+    "judge/baseline/measure.cpp": "ce3e97b3ff732a9c1e47b2c4c026cf91c49eaddb370387adba7a3698eee4ef57",
+    "judge/baseline/reproduce.sh": "101504d87f4202d0db7a4d2fccae8686988d6d62b6f06c5761236841ada0b1dd",
+    "judge/baseline/delta_anchor.py": "a81c2e9281647e327c22db079eb71c1fc56d1ba2dbfadae4bc46adb64fd54bdd",
+    "judge/reuse/build.py": "2111dad5564d0c98c9f771f01a9d37611284b3174eec92e7c5f1344762cf44b1",
+    "judge/delta_checker.py": "d286206d0533cd849cdd28358fa4d3a24f7da3d36e1e354f8f263a68da3c87e6",
+    "judge/delta_policy.py": "342819817f31728f4cb5bea6de205be2e3bcc57b5193cedb0510825e48c29675",
+    "lean-toolchain": "3aac669c7a910ec2389f4e4f921b605adf6ebf2d1e0c9b9cd0be4d33f3f5db71",
+    "lake-manifest.json": "a68bba8f54caa84cab4242d0084f7833e0eff8342f1e66563b65a7ffb1dcf775",
+    "judge/audit/policy.json": "3173035f9956ab74243f80fba48be2d36824e934cd08fbc51a75a2d0e783e3e1",
+    "judge/audit/reference.py": "0e8aefadaaba3fa07b6f40e2c06f4a4d8b48d49f10b6c5305e817b3fb9e550d7",
+    "judge/prepare.sh": "8ae3dec1d9f84c2057c1206d11c80395f39152c821cd2561e2c102a8994312b4",
+    ".github/workflows/baseline.yml": "d0a1466b73cc199d6cb30639a25fa3ddefeecda847a18fec3286f3bc3862ddda",
+    "judge/delta_witness.py": "a0239983a9f9e567535cbfbfa16055c23399da94f11773e231efe36c63649d6c"
+  },
+  "signature_distribution": {
+    "bytes": 2742986,
+    "sha256": "900e306d12fcb24fc41570a5c30aa37c9d9ebbe02d2a56349673ca6fec312102"
+  },
+  "boundary_reproduction": {
+    "run": "https://github.com/nikete/rh_golf/actions/runs/44957970948",
+    "revision": "d2ccd42a3bafbbd7000aeafb57ac4d4037e3af3b",
+    "measure_job": 137010657851,
+    "artifact_id": 14729635613,
+    "artifact_zip_sha256": "60919707156be6f74cc586533f158c5b23d073317bd297460efe8ca731121f56",
+    "receipt_sha256": "e739e96a0ea18474a5bad4f01f418a63d95f1c30a42c7c0b2617ad40a9ffba5e"
+  }
+}
