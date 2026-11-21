@@ -1,0 +1,28 @@
+{
+  "archive_deps": [],
+  "archive_module": "GroundTheory.GlobalFields.TateThesis.ArchChars",
+  "attempt": 1,
+  "author": "nikete",
+  "axioms": [
+    "propext",
+    "Classical.choice",
+    "Quot.sound"
+  ],
+  "certificate_sha256": "243806174cea715b0979265c218f42877f19e332e161d0a949691803107c4c90",
+  "commit": "f913b325a41554d99b03f544b4a31c602489f8de",
+  "helpers": 0,
+  "hole": "GroundTheory.Global.isCoveringMap_circleExp",
+  "impact": {
+    "private_nodes": 35,
+    "shared": {},
+    "version": 1
+  },
+  "issue": 8,
+  "nodes": 35,
+  "run": 44916926178,
+  "season": "1",
+  "source_sha256": "edeb10a5ccae4db22b244ea9f8038faee8ec3cb013adb973c8d15a92f3ac9abe",
+  "standalone_rh_nodes": 2502227175,
+  "status": "accepted",
+  "submitted": "2026-11-21T15:01:15Z"
+}
