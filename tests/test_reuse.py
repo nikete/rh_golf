@@ -58,3 +58,35 @@ class ReuseTests(unittest.TestCase):
         self.asset.write_bytes(gzip.compress(b"changed"))
         with self.assertRaisesRegex(RuntimeError, "pinned digest"):
             self.verify("Target", "Donor")
+
+    def test_portfolio_certificate_is_independent_of_manifest_order(self):
+        from reuse.portfolio import verify_portfolio
+        pairs = [("Target", "Donor"), ("Donor", "Mathlib.«a.b»")]
+        results = verify_portfolio(pairs, self.graph)
+        other = verify_portfolio([(["Donor"], ["Mathlib", "a.b"]), (["Target"], ["Donor"])], self.graph)
+        self.assertEqual(results, other)
+        self.assertEqual(results["standalone_rh_nodes"], 11)
+        self.assertEqual(results["coverage"], {"submitted": 2, "reachable": 2, "bypassed": 0})
+        solo = verify_portfolio([("Target", "Donor")], self.graph)
+        self.assertEqual(solo["standalone_rh_nodes"], self.verify("Target", "Donor")["standalone_rh_nodes"])
+        self.assertNotEqual(solo["certificate_sha256"], results["certificate_sha256"])
+
+    def test_portfolio_checks_bypassed_entries(self):
+        from reuse.portfolio import verify_portfolio
+        score = verify_portfolio([("Root", "Mathlib.«a.b»"), ("Target", "Donor")], self.graph)
+        self.assertEqual(score["live_groups"], frozenset({4}))
+        self.assertEqual(score["coverage"], {"submitted": 2, "reachable": 1, "bypassed": 1})
+        with self.assertRaisesRegex(ValueError, "Cyclic"):
+            verify_portfolio([("Root", "Mathlib.«a.b»"), ("Target", "Donor"), ("Donor", "Target")], self.graph)
+        # One forward reference would be cyclic on its own. The simultaneous
+        # replacement of Root makes both declarations well-founded.
+        joint = verify_portfolio([("Target", "Root"), ("Root", "Mathlib.«a.b»")], self.graph)
+        self.assertEqual(joint["standalone_rh_nodes"], 7)
+
+    def test_portfolio_rejects_duplicate_invalid_and_empty_edits(self):
+        from reuse.portfolio import verify_portfolio
+        bad = [[], [["Donor"]], [("Donor", "Donor")], [("Target", "Ty")],
+               [("Target", "Donor"), (["Target"], ["Mathlib", "a.b"])]]
+        for pairs in bad:
+            with self.subTest(pairs=pairs), self.assertRaises(ValueError):
+                verify_portfolio(pairs, self.graph)

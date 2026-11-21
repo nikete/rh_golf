@@ -1,6 +1,7 @@
 """Historical attribution of verified reductions in a complete proof of ordinary RH."""
 from collections import defaultdict
 from dataclasses import dataclass
+from archive_portfolio import ArchiveRecord, PORTFOLIO_VERIFIER, portfolio_nodes
 
 
 def validate_impact(value):
@@ -44,9 +45,6 @@ def score_project(rows, refs, baseline, graph=None):
         start = Route("course-reflection", reference_size)
 
     archive_record = None
-    if graph is not None:
-        from archive_portfolio import ArchiveRecord
-        archive_record = ArchiveRecord(graph, reference, baseline)
     winner = start
     history = []
     credit = defaultdict(int)
@@ -55,16 +53,22 @@ def score_project(rows, refs, baseline, graph=None):
     halves = {"prime-window": {}, "prime-supply": {}}
     for row in sorted(rows, key=lambda r: r["issue"]):
         issue, hole = row["issue"], row["hole"]
-        measurement = row.get("impact")
         kind = {"Formalism.VW.rh_of_right": "reflection", "riemannHypothesis": "riemann"}.get(hole, hole)
-        if kind == "window-logic":
-            continue
-        if measurement is None:
-            pending.append(issue)
-            continue
-        check(measurement)
-        size = footprint_size(measurement)
-        if archive_record is not None and ("archive_deps" in row or kind in ("reflection", "riemann")):
+        bulk = row.get("verifier") == PORTFOLIO_VERIFIER
+        if not bulk:
+            if kind == "window-logic":
+                continue
+            measurement = row.get("impact")
+            if measurement is None:
+                pending.append(issue)
+                continue
+            check(measurement)
+            size = footprint_size(measurement)
+        if bulk:
+            candidate = Route("archive-portfolio", portfolio_nodes(row), (issue,))
+        elif graph is not None and ("archive_deps" in row or kind in ("reflection", "riemann")):
+            if archive_record is None:
+                archive_record = ArchiveRecord(graph, reference, baseline)
             target = {"reflection": "Formalism.VW.rh_of_right", "riemann": "riemannHypothesis"}.get(hole, hole)
             record = archive_record.consider(row, target)
             if archive_record.last_bundle_warning:

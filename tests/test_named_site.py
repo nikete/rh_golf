@@ -13,6 +13,38 @@ from board import ROOT, render
 
 
 class NamedSiteTests(unittest.TestCase):
+    def test_root_portfolio_and_direct_proof_share_complete_size_ranking(self):
+        url = "https://raw.githubusercontent.com/demo/proofs/" + "b"*40 + "/round.jsonl.gz"
+        with tempfile.TemporaryDirectory() as temp:
+            work = Path(temp)
+            for issue, author, local, total in [(91, "a", 3, 200), (92, "a", 10, 180), (93, "b", 2, 190)]:
+                row = dict(status="accepted", hole="riemann", season="1", author=author, issue=issue,
+                           run=42, attempt=1, nodes=local, helpers=0, axioms=[], source_sha256="a"*64,
+                           certificate_sha256="b"*64)
+                if issue == 92:
+                    row.update(hole="riemannHypothesis", verifier="pinned-export-exact-reuse-portfolio-v1",
+                               standalone_rh_nodes=total, portfolio_url=url, portfolio_sha256="c"*64,
+                               portfolio_coverage=dict(submitted=5, reachable=3, bypassed=2))
+                else:
+                    row["impact"] = dict(version=1, private_nodes=local, shared={f"dep{issue}": total-local})
+                folder = work / "ledger" / "1" / str(issue)
+                folder.mkdir(parents=True)
+                (folder / "score.json").write_text(json.dumps(row))
+                (folder / "Entry.lean").write_text("-- rendering fixture")
+            render(work / "ledger", work / "site")
+            index = (work / "site/index.html").read_text()
+            self.assertIn("3 of 5 substitutions reachable", index)
+            self.assertIn(f"href='{url}'", index)
+            self.assertIn("<td>—</td>", index)
+            root = (work / "site/riemann.html").read_text()
+            self.assertIn("Complete RH nodes", root)
+            self.assertIn("pinned-export-exact-reuse-portfolio-v1", root)
+            scores = json.loads((work / "site/scores.json").read_text())
+            best = scores["personal_bests"]["riemann"]
+            self.assertEqual([(r["issue"], r["nodes"], r["complete_rh_nodes"]) for r in best],
+                             [(92, 10, 180), (93, 2, 190)])
+            self.assertEqual(scores["records"]["riemann"], 180)
+
     def test_named_entries_render_without_legacy_headroom(self):
         baseline = json.loads((ROOT / "judge/baseline.json").read_text())
         original = baseline["archive_nodes"]

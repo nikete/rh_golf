@@ -5,7 +5,9 @@ on:
     paths:
       - 'judge/baseline/**'
       - 'judge/baseline.json'
-      - 'judge/reuse/**'
+      - 'judge/reuse/build.py'
+      - 'judge/reuse/index.lock.json'
+      - 'judge/reuse/signatures.jsonl.gz'
       - 'judge/archive_graph.lock.json'
       - 'judge/fetch_graph.py'
       - 'lean-toolchain'

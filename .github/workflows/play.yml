@@ -77,17 +77,24 @@ jobs:
               share = 100 * entry["points"] / project["archive_nodes"]
               summary = (f"Accepted on **{r['hole']}** with **{r['nodes']:,} local nodes**. "
                          f"Credited **{entry['points']:,} RH nodes** ({share:.8f}% of the original ordinary RH proof).")
+              if "portfolio_coverage" in r:
+                  coverage = r["portfolio_coverage"]
+                  summary = (f"Accepted **{coverage['submitted']:,} named replacements**. The complete RH proof "
+                             f"uses **{coverage['reachable']:,}** of them. Credited **{entry['points']:,} RH nodes** "
+                             f"({share:.8f}% of the original ordinary RH proof).")
               if "standalone_rh_nodes" in r:
                   delta = project["archive_nodes"] - r["standalone_rh_nodes"]
                   summary += f" Used alone in the archive, this edit saves **{delta:,} nodes**."
               warning = project.get("bundle_warnings", {}).get(str(issue))
               if warning:
-                  summary += f" Optional combination skipped: {warning}."
+                  summary += f" This snapshot skipped the optional combination ({warning}). The board retries combinations when earlier receipts arrive."
               if r["hole"] == "window-logic":
                   summary += " This is a practice entry."
               if r["hole"] in ("prime-window", "prime-supply"):
                   summary += " Credit on the prime route requires a record-setting pair and can update when a partner arrives."
-              summary += f" Current complete proof: **{project['current_nodes']:,} nodes**."
+              summary += f" Complete proof in this ledger snapshot: **{project['current_nodes']:,} nodes**."
+              owner, repo = os.environ["GITHUB_REPOSITORY"].split("/")
+              summary += f" [Current standings](https://{owner}.github.io/{repo}/#standings)."
           elif r["status"] == "unverified":
               summary = "Verification could not finish on this runner. The entry can be retried.\n\n" + r["reason"]
           else:
@@ -107,11 +114,3 @@ jobs:
       - name: Flag incomplete verification for retry
         if: steps.result.outputs.status == 'unverified'
         run: exit 1
-  publish:
-    needs: record
-    if: needs.record.outputs.accepted == 'true'
-    uses: ./.github/workflows/pages.yml
-    permissions:
-      contents: write
-      pages: write
-      id-token: write

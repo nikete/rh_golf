@@ -26,6 +26,7 @@ ISSUE_TITLE = re.compile(r"^\[entry\]\s+(?:`([^`]+)`|([^\s`]+))(?:\s+.*)?$", re.
 def valid_target(name):
     return isinstance(name, str) and 0 < len(name) <= 1024 and name.isprintable()
 SOURCE_BLOCK = re.compile(r"\A(?:### Lean source\s+)?```(?:lean4?|Lean)?[ \t]*\n(.*?)\n```\s*\Z", re.S)
+PORTFOLIO = re.compile(r"reuse-file[ \t]+(\S+)[ \t]+([0-9a-f]{64})\n")
 REUSE = re.compile(r"reuse[ \t]+([^\r\n]+)\n")
 LOGIN = re.compile(r"[A-Za-z0-9][A-Za-z0-9-]{0,38}\Z")
 SEASON = "1"
@@ -166,9 +167,40 @@ def directives(src):
     return portfolio, "".join(kept)
 
 
+def judge_manifest(hole, original, body, nominations):
+    from reuse import AXIOMS
+    from reuse.manifest import fetch_pairs
+    from reuse.portfolio import verify_portfolio
+    if hole != "riemannHypothesis":
+        raise Rejected("Use [entry] riemannHypothesis for a complete replacement portfolio.")
+    if nominations:
+        raise Rejected("List all desired edits in the complete portfolio file.")
+    match = PORTFOLIO.fullmatch(body)
+    if not match:
+        raise Rejected("Supply one reuse-file line with a commit-pinned raw GitHub URL and lowercase SHA-256.")
+    url, digest = match.groups()
+    graph = open_graph()
+    try:
+        result = verify_portfolio(fetch_pairs(url, digest), graph)
+    except (KeyError, ValueError) as exc:
+        raise Rejected(str(exc)) from exc
+    edits = result["replacements"]
+    nodes = sum(edits[g].private_nodes for g in result["live_groups"])
+    score = {"verifier": result["verifier"], "axioms_scope": "pinned-export-upper-bound",
+             "axioms": AXIOMS, "helpers": 0, "nodes": nodes,
+             "portfolio_url": url, "portfolio_sha256": digest, "portfolio_coverage": result["coverage"],
+             "standalone_rh_nodes": result["standalone_rh_nodes"],
+             "source_sha256": hashlib.sha256(original.encode()).hexdigest(),
+             "certificate_sha256": result["certificate_sha256"]}
+    validate_score(score)
+    return score
+
+
 def judge(hole, text, trusted_example=False):
     original = validate_source(text)
     portfolio, src = directives(original)
+    if src.startswith("reuse-file"):
+        return judge_manifest(hole, original, src, portfolio)
     fast = FAST_NAMES.get(hole, hole)
     module = None
     reuse = REUSE.fullmatch(src)
@@ -226,11 +258,18 @@ def judge(hole, text, trusted_example=False):
 
 
 def validate_score(score):
-    if (type(score["nodes"]) is not int or score["nodes"] < 1
-            or (score["nodes"] > MAX_NODES and score.get("verifier") != "pinned-export-exact-reuse-v1")
+    method = score.get("verifier", "")
+    whole = method == "pinned-export-exact-reuse-portfolio-v1"
+    export_verified = whole or method == "pinned-export-exact-reuse-v1"
+    if (type(score["nodes"]) is not int or score["nodes"] < (0 if whole else 1)
+            or (score["nodes"] > MAX_NODES and not export_verified)
             or type(score["helpers"]) is not int or not 0 <= score["helpers"] <= 1000
             or not isinstance(score["axioms"], list) or not set(score["axioms"]) <= ALLOWED_AXIOMS):
         raise ValueError("Malformed replay result")
+    if whole:
+        from archive_portfolio import portfolio_nodes
+        portfolio_nodes(score)
+
 
 
 def main():
@@ -248,7 +287,7 @@ def main():
         try:
             _, src, _ = event_submission(json.loads(args.event.read_text()))
             _, body = directives(src)
-            needs_lean = REUSE.fullmatch(body) is None
+            needs_lean = REUSE.fullmatch(body) is None and not body.startswith("reuse-file")
         except Rejected:
             needs_lean = False
         print("needs_lean=" + str(needs_lean).lower())

@@ -1,8 +1,29 @@
 """Evaluate named, kernel-checked substitutions together in the ordinary RH proof."""
+import re
+
 from archive_graph import IncompatibleReplacements, Replacement
 
 REFLECTION = "Formalism.VW.rh_of_right"
 ROOT = "riemannHypothesis"
+PORTFOLIO_VERIFIER = "pinned-export-exact-reuse-portfolio-v1"
+
+
+def portfolio_nodes(row):
+    """Read the full RH cost from a bulk verifier receipt for offline ledger replay."""
+    from reuse.manifest import validate_url
+    nodes = row.get("standalone_rh_nodes")
+    coverage = row.get("portfolio_coverage")
+    digest = row.get("portfolio_sha256")
+    if (row.get("verifier") != PORTFOLIO_VERIFIER or type(nodes) is not int or nodes <= 0
+            or not isinstance(digest, str) or not re.fullmatch("[a-f0-9]{64}", digest)
+            or not isinstance(coverage, dict)
+            or any(type(coverage.get(k)) is not int or coverage[k] < 0
+                   for k in ("submitted", "reachable", "bypassed"))
+            or coverage["submitted"] == 0
+            or coverage["reachable"] + coverage["bypassed"] != coverage["submitted"]):
+        raise ValueError("Malformed verified RH portfolio receipt")
+    validate_url(row.get("portfolio_url"))
+    return nodes
 
 
 def replacement_for(graph, row):

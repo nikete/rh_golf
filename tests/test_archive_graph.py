@@ -171,3 +171,41 @@ class PortfolioTests(unittest.TestCase):
         self.assertEqual(result[2], (2,))
         self.assertRegex(record.last_bundle_warning, "Cyclic")
         self.assertIn(2, record.entries)
+
+
+class CompletePortfolioTests(unittest.TestCase):
+    def bulk(self, issue, nodes):
+        from archive_portfolio import PORTFOLIO_VERIFIER
+        return dict(issue=issue, hole="portfolio", verifier=PORTFOLIO_VERIFIER,
+                    standalone_rh_nodes=nodes, portfolio_sha256="c"*64,
+                    portfolio_url="https://raw.githubusercontent.com/example/project/" + "a"*40 + "/proof.jsonl.gz",
+                    portfolio_coverage=dict(submitted=1000, reachable=900, bypassed=100))
+
+    def score(self, rows, graph=None):
+        from impact import score_project
+        refs = {"reflection": {"impact": dict(version=1, private_nodes=100, shared={})}}
+        return score_project(rows, refs, dict(archive_nodes=1000, spine_nodes=800, composition_nodes=4), graph)
+
+    def test_complete_receipt_needs_no_replay_or_graph(self):
+        project, credits = self.score([self.bulk(6, 886), self.bulk(8, 886), self.bulk(9, 830)], graph=object())
+        self.assertEqual(project["winning_route"], "archive-portfolio")
+        self.assertEqual(project["winning_issues"], (9,))
+        self.assertEqual(project["pending_issues"], [])
+        self.assertEqual(credits, {6: 14, 9: 56})
+
+    def test_complete_routes_only_win_the_increment(self):
+        direct = dict(issue=7, hole="riemann", impact=dict(version=1, private_nodes=850, shared={}))
+        rows = [self.bulk(10, 820), self.bulk(6, 880), direct, self.bulk(9, 860)]
+        project, credits = self.score(rows)
+        self.assertEqual(project["current_nodes"], 820)
+        self.assertEqual(project["winning_issues"], (10,))
+        self.assertEqual(credits, {6: 20, 7: 30, 10: 30})
+
+    def test_inconsistent_bulk_receipt_rejected(self):
+        from archive_portfolio import portfolio_nodes
+        row = self.bulk(1, 700)
+        for key, value in (("portfolio_coverage", {"submitted": 3, "reachable": 1, "bypassed": 1}),
+                           ("portfolio_sha256", "bogus"), ("portfolio_url", None), ("standalone_rh_nodes", True),
+                           ("portfolio_url", "https://raw.githubusercontent.com/example/project/main/proof.jsonl.gz")):
+            with self.subTest(key=key, value=value), self.assertRaises(ValueError):
+                portfolio_nodes(row | {key: value})

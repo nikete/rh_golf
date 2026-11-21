@@ -26,7 +26,7 @@ The judge locates the declaration’s defining module in the pinned source. If t
 
 In the archive environment, `theorem Entry.answer : type_of% @Fully.Qualified.theorem := …` copies the exact statement, including implicit arguments. Supply your own proof after `:=`. To use lemmas from another pinned archive module, add a leading `-- archive-import: Qualified.Module` line after any module hint.
 
-Two RH-reachable theorems, `lam_copy` and `sigSpan_copy`, each contain over four million local nodes. Their pinned source lines, full declaration names and individual weights appear on the leaderboard. Building these modules from scratch may exceed the hosted runner’s time or memory limits. [Large proofs to shrink](https://nikete.github.io/rh_golf/#large-targets)
+Two RH-reachable theorems, `lam_copy` and `sigSpan_copy`, each contain over four million local nodes. The leaderboard shows their original weights, source lines and best accepted standalone replacements. To find another target, download the checksum-pinned dependency graph with the full index of declaration names and node costs. Building large archive modules from scratch may exceed the hosted runner’s time or memory limits. [Featured proofs](https://nikete.github.io/rh_golf/#large-targets) · [Download the declaration graph](https://github.com/nikete/rh_golf/releases/tag/rh-graph-efc6b4d30fb6ec3f330c) · [Checksums](judge/archive_graph.lock.json)
 
 Every entry has an authenticated GitHub author, an immutable issue-open snapshot and a CI verdict. To improve a score, open a fresh issue. The leaderboard links the exact submitted source and CI receipt. AI-assisted entries are welcome.
 
@@ -39,6 +39,16 @@ reuse Fully.Qualified.Donor
 ```
 
 The target and donor must both be theorems in the pinned export. The donor may come from the archive or Mathlib. The exported type expressions and ordered universe parameters must match exactly. The judge checks the export’s axiom allowlist, checks that the proposed reference creates no dependency cycle, and measures the RH proof with that reference in place. This path relies on the independently checked export and produces a `pinned-export-exact-reuse-v1` receipt. Custom Lean submissions are replayed by Lean’s kernel. [Pinned input](judge/baseline.json) · [Independent verification logs](https://math.mit.edu/~drew/grh/)
+
+### Submit many theorem substitutions together
+
+Title the issue `[entry] riemannHypothesis`. Put one line inside its Lean fence.
+
+```lean
+reuse-file https://raw.githubusercontent.com/OWNER/REPO/40_HEX_COMMIT/PATH.jsonl.gz SHA256
+```
+
+Pin the URL to the full 40-hex commit and replace `SHA256` with the 64-character lowercase SHA-256 of the gzip file. Before compression, the file is UTF-8 JSON Lines with one `[target, donor]` pair per line. Give each name as a qualified string or an array of exact Lean name components. The judge checks every pair under the exact-reuse rules, checks the joint graph for cycles, and scores the resulting complete RH proof. To build on an entry, download its manifest, edit it and submit the revised file in a new issue. Each portfolio competes as submitted. To combine portfolios, merge their manifests into the file you submit.
 
 ## Score
 

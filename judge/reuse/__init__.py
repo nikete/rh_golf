@@ -20,13 +20,7 @@ def read_index(path, pin):
     return payload
 
 
-def verify_reuse(target, donor, graph, source):
-    """Return a scored receipt for replacing a theorem's body with its named donor.
-
-    The kernel constant typing rule gives the donor's original statement
-    instantiated at the target universe parameters. Class membership certifies
-    both the very same statement expression and the same ordered parameters.
-    """
+def signature_index():
     pin = json.loads((HERE / "index.lock.json").read_text())
     baseline = json.loads((HERE.parent / "baseline.json").read_text())
     if pin["export_sha256"] != baseline["compressed_sha256"]:
@@ -37,14 +31,24 @@ def verify_reuse(target, donor, graph, source):
     header = json.loads(next(lines))
     if header != {"format": 1, "export": pin["export_sha256"], "axioms": AXIOMS}:
         raise RuntimeError("Unexpected theorem reuse signature header")
+    return pin, header, map(json.loads, lines)
+
+
+def verify_reuse(target, donor, graph, source):
+    """Return a scored receipt for replacing a theorem's body with its named donor.
+
+    The kernel constant typing rule gives the donor's original statement
+    instantiated at the target universe parameters. Class membership certifies
+    both the very same statement expression and the same ordered parameters.
+    """
+    pin, header, signatures = signature_index()
     target_id = graph.target(target)
     donor_parts = list(graph.name_parts(donor))
     donor_key = json.dumps(donor_parts, ensure_ascii=False, separators=(",", ":")).encode()
     donor_id = graph.names.get(donor_key)
     if donor_id == target_id:
         raise ValueError("A theorem cannot reuse itself")
-    for line in lines:
-        expr, params, nodes, deps, theorems, library = json.loads(line)
+    for expr, params, nodes, deps, theorems, library in signatures:
         if target_id not in theorems:
             continue
         if donor_id not in theorems and (donor_id is not None or donor_parts not in library):
