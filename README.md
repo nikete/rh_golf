@@ -9,9 +9,12 @@ A points-only Lean proof league for the Riemann hypothesis. Play a hole by submi
 | `window-logic` | Incompatible good and bad windows exclude a hypothetical zero, under the stated hypotheses. | 104 nodes |
 | `reflection` | Nonvanishing of zeta right of the critical line implies Mathlib’s RH. | 2,297 nodes |
 | `prime-window` | A one-sided bound for the named centered prime sum on arbitrarily late three-halves power windows implies RH. | Open |
+| `prime-supply` | Prove the prime-window bound for ordinary primes. This and a proof of `prime-window` compose to give unconditional RH. | Open |
 | `riemann` | Mathlib’s unconditional `RiemannHypothesis`. | Open |
 
 The pinned [course propositions](League/Targets.lean) contain no solutions. [Reference proofs](examples/) set initial scores and never appear as players. The archived paper’s full certificate exceeds this hosted course’s limits. The conditional prime-window target uses the statistic and quantifiers of the [published analytic reduction](https://github.com/nasqret/riemann-rev/blob/d53b3804bd013df4cf9af3b4087728148c90c9bd/references/archive-bridges/WindowBridge.lean) and the [original centered sum](https://github.com/Deicyde/riemann-hypothesis/blob/40e56bab026552e089d7afcfeff08d2defb9c005/src/Development/AutomorphicArithmetic/DedekindLFunctions/CharFamily.lean). The reflection reference uses the completed zeta functional equation. The first hole adapts the [reading project’s window logic](https://github.com/nasqret/riemann-rev/blob/d53b3804bd013df4cf9af3b4087728148c90c9bd/lean/Reading/WindowLogic.lean).
+
+The [proof map](https://nikete.github.io/rh_golf/proof.html) describes how the two prime-window holes compose. The course’s reflection proof uses the symmetry of completed zeta and takes 2,297 nodes. Applying the same judge to the original reflection argument gives 7,404 nodes, a measured saving of 69.0% for this step. The full archive has separate dependencies. The [reference workflow](.github/workflows/course.yml) reproduces the comparison.
 
 ## Enter
 
@@ -60,3 +63,5 @@ For a fresh fork, enable Issues, select **GitHub Actions** as the Pages publishi
 ## Design precedents
 
 [Code Golf](https://code.golf/stats) reports over 12,000 golfers and 570,000 submissions. Its [per-hole scoring](https://code.golf/about) rewards repeated improvements and ties. [Project Euler](https://projecteuler.net/recent) maintains a numbered mathematical problem archive with problem-level solve counts. [lean.golf](https://deancureton.com/projects/lean-golf/) already demonstrates short Lean proof challenges with GitHub identity. RH Golf uses its own putting-green mark, scorecards and a critical-strip diagram. A seasonal points table and open source entries make reductions inspectable.
+
+[Code Golf Stack Exchange’s standing bounties](https://codegolf.meta.stackexchange.com/questions/5243/list-of-bounties-with-no-deadline) offer reputation to anyone who beats a specified score. RH Golf keeps the open challenge and makes the award automatic.

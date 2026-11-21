@@ -158,12 +158,12 @@ def render(ledger, output):
     earn = sum(len(holes[h["id"]]) for h in CONFIG)
     page("index.html", "RH Golf · Riemann proof league", f"""
     <section class='hero'><div class='herocopy'><p class='eyebrow'><span class='dot'></span> Season 01 · Open course</p>
-    <h1>Riemann<br><em>Proof Golf</em></h1><p class='intro'>Find a smaller Lean proof. Play four holes from the Riemann hypothesis. Earn up to 1,000 points per hole.</p>
+    <h1>Riemann<br><em>Proof Golf</em></h1><p class='intro'>Find a smaller Lean proof of the Riemann hypothesis or one of the steps that implies it. Earn up to 1,000 points per hole.</p>
     <div class='buttons'><a class='primary' href='#course'>Choose a hole <span>↓</span></a>
     <a class='plain' href='rules.html'>Scoring rules →</a></div></div>
     <figure><img src='critical-strip.svg' width='530' height='322' alt='The critical line at real part one half, with the first three positive zeta zero heights marked.'>
     <figcaption>Critical strip <span>ζ(s) = 0</span></figcaption></figure></section>
-    <section id='course'><div class='sectionhead'><h2>The course</h2><span>04 holes</span></div><div class='holes'>{"".join(cards)}</div></section>
+    <section id='course'><div class='sectionhead'><h2>The course</h2><a href='proof.html'>How the holes fit together →</a></div><div class='holes'>{"".join(cards)}</div></section>
     <section id='standings'><div class='sectionhead'><h2>Leaderboard</h2><span>{len(leaders)} players · {earn} personal bests</span></div>
     {leaderboard}</section>""")
     for i, h in enumerate(CONFIG, 1):
@@ -179,7 +179,7 @@ def render(ledger, output):
         else:
             benchmark = "<div class='benchmark'><span>Course reference</span><strong>Open record</strong></div>"
         note = ""
-        if k == "prime-window":
+        if k in ("prime-window", "prime-supply"):
             note = "The window must hold for every real y in [Y, Y³ᐟ²] on arbitrarily late intervals. The constant may depend on θ."
         if k == "riemann":
             note = "This hole accepts compact, self-contained candidates under the CI limits. The original multi-gigabyte proof is outside this course’s budget."
@@ -192,6 +192,7 @@ def render(ledger, output):
           {benchmark}<div class='sectionhead'><h2>Hole standings</h2><span>Fewest nodes wins</span></div>{standings_html}</section>""")
     rules = (ROOT / "site/rules.html").read_text().replace("{{REPO}}", GITHUB)
     page("rules.html", "Scoring rules · RH Golf", rules)
+    page("proof.html", "The proof map · RH Golf", (ROOT / "site/proof.html").read_text())
     proofs = output / "proofs"
     proofs.mkdir(exist_ok=True)
     for r in rows:

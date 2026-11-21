@@ -1,0 +1,15 @@
+<section class="inner">
+<a class="back" href="index.html#course">← Course</a>
+<h1>The proof map</h1>
+<p class="intro">Two entries can fit together to give an unconditional proof of RH. One proves an estimate for primes. The other proves that the estimate forces the zeta zeros onto the critical line.</p>
+<h2>Where to try a shortcut</h2>
+<p><a href="prime-supply.html"><strong>Supply the prime windows.</strong></a> For each exponent θ strictly between ½ and 1, find a constant C and arbitrarily late intervals [Y, Y<sup>3/2</sup>]. At every point y of a chosen interval, the centered prime sum must be at most Cy<sup>θ</sup>. A direct proof for the ordinary primes could bypass the archive’s route through families of Dirichlet characters.</p>
+<p><a href="prime-window.html"><strong>From prime windows to RH.</strong></a> The analytic part turns this one-sided bound into nonvanishing. A reading project independently checked this implication with Lean and NanoDa. Its export contains 61,697 declarations, including library dependencies. <a href="https://github.com/nasqret/riemann-rev/blob/d53b3804bd013df4cf9af3b4087728148c90c9bd/references/archive-bridges/WindowBridge.lean">Reading project’s formal reduction ↗</a></p>
+<code>criterion : Golf.PrimeWindow<br>supply : Golf.Windows<br>criterion supply : RiemannHypothesis</code>
+<p>The <a href="window-logic.html">good-window warm-up</a> isolates the quantifier argument. The <a href="reflection.html">reflection hole</a> uses the functional equation to rule out a zero to the left of the line once zeros on the right have been excluded.</p>
+<h2>A measured shortcut</h2>
+<p>On the reflection hole, the archive’s proof takes <strong>7,404 nodes</strong>. Using the symmetry of the completed zeta function directly takes <strong>2,297 nodes</strong>. Both runs use the same theorem type and pinned library. This saves 5,107 nodes (69.0%) on the final reflection step. Its effect on the full RH proof has yet to be measured. <a href="{{REPO}}/actions/workflows/course.yml">Reproduce the comparison in CI ↗</a></p>
+<h2>The original verification</h2>
+<p>The release has 175,187 Lean files. Its headline theorem uses Mathlib’s definition of RH. The four additional conclusions concern zeta zeros and Dirichlet L-functions. Andrew Sutherland reports a full compile, replay of every module and acceptance of the exported proof by nanoda and con-leche. <a href="https://math.mit.edu/~drew/grh/">Verification and logs ↗</a></p>
+<p>The source graph places all 175,187 files below the final module. Replacing a lemma saves space in the whole proof only if declarations reachable through it disappear from the final proof’s dependencies. <a href="https://andrewodesky.com/rh/stats.html">Andrew O’Desky’s source graph and measurements ↗</a></p>
+</section>

@@ -28,7 +28,7 @@ jobs:
       - run: docker pull "$(cat judge/image.txt)"
       - name: Judge the examples through the public sandbox
         run: |
-          python3 judge/run.py --hole window-logic --source examples/window-logic.lean --output .out/window-logic.json
+          python3 tests/issue_roundtrip.py
           python3 judge/run.py --hole reflection --source examples/reflection.lean --output .out/reflection.json
           python3 - <<'PY'
           import json, pathlib
@@ -45,5 +45,26 @@ jobs:
             if python3 judge/run.py --hole window-logic --source tests/"$test".lean --output .out/"$test".json; then
               echo "Invalid candidate was accepted"; exit 1
             fi
-            python3 -c 'import json,sys; assert json.load(open(sys.argv[1]))["status"] == "rejected"' .out/"$test".json
           done
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          for name, expected in (("admitted", "disallowed axiom"), ("wrong-type", "wrong target")):
+              result = json.loads(Path(f".out/{name}.json").read_text())
+              assert result["status"] == "rejected" and expected in result["reason"], result
+          PY
+      - name: Measure the original archive on the same reflection hole
+        run: |
+          curl --fail --location --retry 3 --output .out/RhOfRight.lean \
+            https://raw.githubusercontent.com/Deicyde/riemann-hypothesis/40e56bab026552e089d7afcfeff08d2defb9c005/src/Formalism/GammaFactorNonvanishing/RhOfRight.lean
+          python3 tests/archive_reflection.py .out/RhOfRight.lean .out/archive-entry.lean
+          python3 judge/run.py --hole reflection --source .out/archive-entry.lean --output .out/archive-score.json
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          before = json.loads(Path(".out/archive-score.json").read_text())
+          after = json.loads(Path(".out/reflection.json").read_text())
+          assert before["nodes"] == 7404 and before["helpers"] == 2, before
+          assert before["certificate_sha256"] == "46177880ee9042095f545854d3b8c5cfa4ac2e97d98c326b4a531b0edb778dcd"
+          print(f"Reflection: {before['nodes']:,} → {after['nodes']:,} nodes ({1-after['nodes']/before['nodes']:.1%} smaller).")
+          PY
