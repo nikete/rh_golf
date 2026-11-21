@@ -1,0 +1,20 @@
+{
+  "attempt": 1,
+  "author": "nikete",
+  "axioms": [
+    "propext",
+    "Classical.choice",
+    "Quot.sound"
+  ],
+  "certificate_sha256": "35aa8a731b80fd6e7002e7c07eb591f2097f74f053df0fe391169bf84c1d57dc",
+  "commit": "f1046a1852428d9aa073df7b8fb46c782cb70837",
+  "helpers": 0,
+  "hole": "reflection",
+  "issue": 1,
+  "nodes": 1030,
+  "run": 44888300964,
+  "season": "1",
+  "source_sha256": "5d502fddbcf7ef5694f75b405a3d187405a18a53219ecbf2554160638bd3e4ec",
+  "status": "accepted",
+  "submitted": "2026-11-21T09:10:18Z"
+}
