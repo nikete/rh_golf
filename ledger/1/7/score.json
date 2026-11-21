@@ -1,0 +1,43 @@
+{
+  "archive_deps": [
+    [
+      "GlobalTheory",
+      "Published",
+      "JacquetShalikaRigidity"
+    ],
+    [
+      "PositivityTheory",
+      "AdelicQuotientData",
+      "jacquetShalikaRigidity"
+    ]
+  ],
+  "attempt": 1,
+  "author": "nikete",
+  "axioms": [
+    "Classical.choice",
+    "Quot.sound",
+    "propext"
+  ],
+  "axioms_scope": "pinned-export-upper-bound",
+  "certificate_sha256": "f8b6de7a567d6a3df24ce77fadeb5f724e2cc8a70725bf587c1265f0e8b2be5e",
+  "commit": "f913b325a41554d99b03f544b4a31c602489f8de",
+  "helpers": 0,
+  "hole": "GlobalTheory.JSW.jacquetShalikaRigidity_holds",
+  "impact": {
+    "private_nodes": 2,
+    "shared": {},
+    "version": 1
+  },
+  "issue": 7,
+  "nodes": 2,
+  "reuse_donor": "PositivityTheory.AdelicQuotientData.jacquetShalikaRigidity",
+  "reuse_statement_id": 14031706,
+  "reuse_universe_parameters": [],
+  "run": 44916914220,
+  "season": "1",
+  "source_sha256": "526adeb71a6f9cc44dcf2cf7fd7e5d011ef17f82b2d96fcec49291c37fbcee22",
+  "standalone_rh_nodes": 2496666869,
+  "status": "accepted",
+  "submitted": "2026-11-21T15:01:09Z",
+  "verifier": "pinned-export-exact-reuse-v1"
+}
