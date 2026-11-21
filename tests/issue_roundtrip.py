@@ -53,11 +53,11 @@ def main():
         site = folder / "site"
         render(ledger / "ledger", site)
         scores = json.loads((site / "scores.json").read_text())
-        assert scores["players"] == [{"author": "fixture-player", "points": 1000, "holes": 1}]
+        assert scores["players"] == [{"author": "fixture-player", "points": 0, "holes": 1}]
         assert scores["accepted"][0]["nodes"] == result["nodes"]
         assert (site / "proofs/7.lean").read_text() == source
         assert "fixture-player" in (site / "window-logic.html").read_text()
-        print("Issue accepted, recorded once across two deliveries, and ranked on a static board.")
+        print("Issue accepted, recorded once across two deliveries, and listed as practice on a static board.")
 
 
 if __name__ == "__main__":

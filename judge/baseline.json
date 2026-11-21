@@ -1,0 +1,38 @@
+{
+  "metric": "rh-declaration-nodes-v1",
+  "root": "riemannHypothesis",
+  "unit": "Distinct Lean expression nodes per reachable non-Mathlib declaration group, summed over the ordinary RH root.",
+  "reflection_cut": "Formalism.VW.rh_of_right",
+  "archive_nodes": 2502227268,
+  "spine_nodes": 2502219617,
+  "reflection_nodes": 7651,
+  "archive_groups": 1258881,
+  "spine_groups": 1258878,
+  "reflection_groups": 3,
+  "composition_nodes": 4,
+  "verified_edges": [
+    [
+      "riemannHypothesis",
+      "rhOfAll"
+    ],
+    [
+      "rhOfAll",
+      "allChi"
+    ],
+    [
+      "rhOfAll",
+      "Formalism.VW.rh_of_every"
+    ],
+    [
+      "Formalism.VW.rh_of_every",
+      "Formalism.VW.rh_of_right"
+    ]
+  ],
+  "lean": "v4.33.1",
+  "mathlib": "0df444a360eaa60ab8c11dca51a86af692955474",
+  "export_url": "https://math.mit.edu/~drew/grh/solution.ndjson.zst",
+  "export_format": "3.1.0",
+  "compressed_sha256": "61a8938ad5f5e57397c1c0e3b954916af546d9004ade01c3555744a681b05381",
+  "unpacked_sha256": "5ea74b912147c5c93cc2b6d70cc727cf908df2f62ac6a20480a3fa02f6be244e",
+  "source_release_sha256": "9631b4f020199e580ba86178cb56c6e9b09f690c2369a80dc4334aa93f49c7fc"
+}

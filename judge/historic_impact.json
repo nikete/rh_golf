@@ -1,0 +1,26 @@
+{
+  "1": {
+    "hole": "reflection",
+    "source_sha256": "5d502fddbcf7ef5694f75b405a3d187405a18a53219ecbf2554160638bd3e4ec",
+    "certificate_sha256": "35aa8a731b80fd6e7002e7c07eb591f2097f74f053df0fe391169bf84c1d57dc",
+    "impact": {
+      "private_nodes": 1031,
+      "shared": {
+        "Golf.Reflection._proof_1": 30
+      },
+      "version": 1
+    }
+  },
+  "2": {
+    "hole": "window-logic",
+    "source_sha256": "1032a9b11cb3429581691c2ea7839cfe48a1cc3d40a13987b308496ab60229b9",
+    "certificate_sha256": "ce79e57a75290d47de56fcab88572bb13a7edb70e8c567856a8c852d04ffba18",
+    "impact": {
+      "private_nodes": 94,
+      "shared": {
+        "Golf.WindowLogic": 49
+      },
+      "version": 1
+    }
+  }
+}

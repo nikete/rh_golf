@@ -1,22 +1,23 @@
 import League.Certificate
+import League.Footprint
 
 /-! Reconstruct and score the certificate without importing anything from the entrant.
 The kernel checks every body against its declared type and the selected course target. -/
 open Lean Golf.Cert
 
-def decode (xs : Array Expr) (n : Node) : Except String Expr := do
+def decode (rename : Name → Name) (xs : Array Expr) (n : Node) : Except String Expr := do
   let atIndex (i : Nat) : Except String Expr := match xs[i]? with
     | some e => .ok e
     | none => .error "invalid or forward expression reference"
   match n with
   | .var i => return .bvar i
   | .sort u => return .sort u.unpack
-  | .const c us => return .const c.unpack (us.map U.unpack)
+  | .const c us => return .const (rename c.unpack) (us.map U.unpack)
   | .app f a => return .app (← atIndex f) (← atIndex a)
   | .lam t b => return .lam .anonymous (← atIndex t) (← atIndex b) .default
   | .pi t b => return .forallE .anonymous (← atIndex t) (← atIndex b) .default
   | .letE t v b => return .letE .anonymous (← atIndex t) (← atIndex v) (← atIndex b) false
-  | .proj c i v => return .proj c.unpack i (← atIndex v)
+  | .proj c i v => return .proj (rename c.unpack) i (← atIndex v)
   | .natLit i => return .lit (.natVal i)
   | .strLit s => return .lit (.strVal s)
 
@@ -42,22 +43,19 @@ partial def visit (env : Environment) (added : NameSet) (e : Expr) : StateM Seen
   | .proj _ _ a | .mdata _ a => child a
   | _ => pure ()
 
-def main (args : List String) : IO Unit := do
-  let [target, file] := args | throw <| IO.userError "expected trusted target and certificate"
-  initSearchPath (← findSysroot)
-  let data ← IO.FS.readFile file
-  if data.utf8ByteSize > 8 * 1024 * 1024 then throw <| IO.userError "certificate exceeds 8 MiB"
-  let cert : Certificate ← IO.ofExcept <| Json.parse data >>= fromJson?
-  if cert.nodes.size > 100000 || cert.items.size > 1000 then throw <| IO.userError "certificate limit"
+def install (base : Environment) (cert : Certificate) (rename : Name → Name)
+    (topType : Option Expr := none) : IO (Environment × NameSet) := do
   let mut xs := #[]
-  for node in cert.nodes do xs := xs.push (← IO.ofExcept <| decode xs node)
-  let mut env ← importModules #[{module := `League.Course}] {}
+  for node in cert.nodes do xs := xs.push (← IO.ofExcept <| decode rename xs node)
+  let mut env := base
   let mut added : NameSet := {}
   for row in cert.items do
-    let n := row.name.unpack
+    let original := row.name.unpack
+    let n := rename original
     if n.isAnonymous || env.contains n then throw <| IO.userError "duplicate or reserved name"
     let some t := xs[row.type]? | throw <| IO.userError "missing type"
     let some v := xs[row.value]? | throw <| IO.userError "missing value"
+    let t := if original == `Entry.answer then topType.getD t else t
     let cv : ConstantVal := {name := n, levelParams := row.params.map QName.unpack, type := t}
     let d : Declaration ← match row.kind with
       | "theorem" => pure <| .thmDecl {cv with value := v}
@@ -68,6 +66,17 @@ def main (args : List String) : IO Unit := do
     | .error _ => throw <| IO.userError s!"kernel rejected {n}"
     | .ok env' => env := env'
     added := added.insert n
+  return (env, added)
+
+def main (args : List String) : IO Unit := do
+  let [target, file] := args | throw <| IO.userError "expected trusted target and certificate"
+  initSearchPath (← findSysroot)
+  let data ← IO.FS.readFile file
+  if data.utf8ByteSize > 8 * 1024 * 1024 then throw <| IO.userError "certificate exceeds 8 MiB"
+  let cert : Certificate ← IO.ofExcept <| Json.parse data >>= fromJson?
+  if cert.nodes.size > 100000 || cert.items.size > 1000 then throw <| IO.userError "certificate limit"
+  let base ← importModules #[{module := `League.Course}] {}
+  let (env, added) ← install base cert id
   let some (.thmInfo answer) := env.find? `Entry.answer | throw <| IO.userError "missing theorem Entry.answer"
   -- A fresh theorem with the locked type, using the supplied theorem only at universe level zero.
   let expected := mkConst (target.toName)
@@ -81,5 +90,21 @@ def main (args : List String) : IO Unit := do
   unless axioms.all allowed.contains do throw <| IO.userError s!"disallowed axiom: {axioms}"
   let walk := do visit env added answer.type; visit env added answer.value
   let seen := (walk.run {}).2
+  -- All inserted helpers receive a separate namespace per hole. The original root type
+  -- is used at the replacement boundary, even when Entry.answer used a reducible alias.
+  let targetName := target.toName
+  let root := if targetName == `Golf.Reflection then `Formalism.VW.rh_of_right
+              else if targetName == `RiemannHypothesis then `riemannHypothesis
+              else `RHGolfImpact ++ targetName ++ `answer
+  let rename := fun n => if n == `Entry.answer then root
+                         else if added.contains n then `RHGolfImpact ++ targetName ++ `helpers ++ n
+                         else n
+  let linkedType ← if targetName == `Golf.Reflection then
+      match (base.find? targetName).bind (·.value? true) with
+      | some t => pure t
+      | none => throw (IO.userError "missing reflection interface")
+    else pure expected
+  let (linked, privateNames) ← install base cert rename (some linkedType)
+  let footprint ← IO.ofExcept (Golf.Footprint.measure linked privateNames root)
   IO.println (Json.mkObj [("nodes", toJson seen.exprs.size),
-    ("helpers", toJson seen.helpers.size), ("axioms", toJson axioms)]).compress
+    ("helpers", toJson seen.helpers.size), ("axioms", toJson axioms), ("impact", footprint)]).compress

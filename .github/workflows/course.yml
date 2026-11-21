@@ -25,6 +25,8 @@ jobs:
           persist-credentials: false
       - uses: ./.github/actions/prepare
       - run: python3 -m unittest discover -s tests -v
+      - name: Verify the exact cost of joining the prime-window proofs
+        run: PATH="$PWD/.tools/lean-4.33.1-linux/bin:$PATH" lake env lean tests/ImpactRoute.lean
       - run: docker pull "$(cat judge/image.txt)"
       - name: Judge the examples through the public sandbox
         run: |
@@ -36,6 +38,8 @@ jobs:
               observed = json.loads(pathlib.Path(f".out/{ref['hole']}.json").read_text())
               for k in ("nodes", "helpers", "axioms", "source_sha256", "certificate_sha256"):
                   assert observed[k] == ref[k], (k, observed, ref)
+              if "impact" in ref:
+                  assert observed["impact"] == ref["impact"], (observed, ref)
               print(ref["hole"], observed["nodes"], observed["certificate_sha256"])
           PY
       - name: Reject an admitted proof and a proof of the wrong statement
@@ -57,7 +61,8 @@ jobs:
         run: |
           curl --fail --location --retry 3 --output .out/RhOfRight.lean \
             https://raw.githubusercontent.com/Deicyde/riemann-hypothesis/40e56bab026552e089d7afcfeff08d2defb9c005/src/Formalism/GammaFactorNonvanishing/RhOfRight.lean
-          python3 tests/archive_reflection.py .out/RhOfRight.lean .out/archive-entry.lean
+          python3 tests/archive_reflection.py .out/RhOfRight.lean .out/archive-entry.lean .out/ArchiveInterface.lean
+          PATH="$PWD/.tools/lean-4.33.1-linux/bin:$PATH" lake env lean .out/ArchiveInterface.lean | tee .out/archive-interface.log
           python3 judge/run.py --hole reflection --source .out/archive-entry.lean --output .out/archive-score.json
           python3 - <<'PY'
           import json
@@ -66,5 +71,26 @@ jobs:
           after = json.loads(Path(".out/reflection.json").read_text())
           assert before["nodes"] == 7404 and before["helpers"] == 2, before
           assert before["certificate_sha256"] == "46177880ee9042095f545854d3b8c5cfa4ac2e97d98c326b4a531b0edb778dcd"
+          baseline = json.loads(Path("judge/baseline.json").read_text())
+          report = Path(".out/archive-interface.log").read_text()
+          impact = json.loads(report.split("archive_footprint=")[1].splitlines()[0])
+          assert impact["private_nodes"] + sum(impact["shared"].values()) == baseline["reflection_nodes"], impact
           print(f"Reflection: {before['nodes']:,} → {after['nodes']:,} nodes ({1-after['nodes']/before['nodes']:.1%} smaller).")
           PY
+      - name: Reproduce the original player receipts with whole-proof accounting
+        env:
+          LEDGER_URL: https://raw.githubusercontent.com/nikete/rh_golf/d525e12133b62e71afe8cd0a77d3ba342f536173/ledger/1
+        run: |
+          for entry in 1 2; do
+            curl -fsSL --retry 3 "$LEDGER_URL/$entry/Entry.lean" -o ".out/entry-$entry.lean"
+            hole=$(python3 -c 'import json,sys; print(json.load(open("judge/historic_impact.json"))[sys.argv[1]]["hole"])' "$entry")
+            python3 judge/run.py --hole "$hole" --source ".out/entry-$entry.lean" --output ".out/entry-$entry.json"
+          done
+          python3 - <<'PYCODE'
+          import json
+          from pathlib import Path
+          for issue, measured in json.loads(Path("judge/historic_impact.json").read_text()).items():
+              result = json.loads(Path(f".out/entry-{issue}.json").read_text())
+              assert result["status"] == "accepted" and all(result[k] == v for k, v in measured.items()), result
+              print(issue, measured["impact"])
+          PYCODE

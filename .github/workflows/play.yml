@@ -50,7 +50,19 @@ jobs:
           accepted = r["status"] == "accepted"
           if accepted:
               subprocess.run(["python3", "judge/post.py", ".out/receipt.json"], check=True)
-              summary = f"Accepted on **{r['hole']}** with **{r['nodes']:,} proof nodes**."
+              subprocess.run(["bash", "judge/snapshot.sh"], check=True)
+              board = json.loads(pathlib.Path("public/scores.json").read_text())
+              issue = int(os.environ["ISSUE_NUMBER"])
+              entry = next(row for row in board["accepted"] if row["issue"] == issue)
+              project = board["project"]
+              share = 100 * entry["points"] / project["archive_nodes"]
+              summary = (f"Accepted on **{r['hole']}** with **{r['nodes']:,} local nodes**. "
+                         f"Credited **{entry['points']:,} RH nodes** ({share:.8f}% of the original ordinary RH proof).")
+              if r["hole"] == "window-logic":
+                  summary += " This is a practice hole."
+              if r["hole"] in ("prime-window", "prime-supply"):
+                  summary += " Credit on the prime route requires a record-setting pair and can update when a partner arrives."
+              summary += f" Current complete proof: **{project['current_nodes']:,} nodes**."
           else:
               summary = "Entry rejected.\n\n" + "\n".join("    " + line for line in r["reason"].splitlines())
           run = f"https://github.com/{os.environ['GITHUB_REPOSITORY']}/actions/runs/{os.environ['GITHUB_RUN_ID']}"

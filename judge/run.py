@@ -4,6 +4,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
+from impact import validate_impact
 import re
 import resource
 import stat
@@ -141,6 +142,7 @@ def judge(hole, text, trusted_example=False):
                 raise Rejected(str(exc) + " " + (work / "err").read_bytes()[:500].decode(errors="replace")) from exc
         score = json.loads((work / "result").read_text())
         validate_score(score)
+        validate_impact(score["impact"])
         return {**score, "source_sha256": hashlib.sha256(src.encode()).hexdigest(),
                 "certificate_sha256": hashlib.sha256(cert.read_bytes()).hexdigest()}
 
