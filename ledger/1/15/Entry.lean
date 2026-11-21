@@ -1,0 +1,1 @@
+reuse PositivityTheory.RgGu.segmentRepresentation
