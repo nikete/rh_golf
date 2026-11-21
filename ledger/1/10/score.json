@@ -1,0 +1,42 @@
+{
+  "archive_deps": [
+    [
+      "GlobalTheory",
+      "Published",
+      "AbelianDeRham"
+    ],
+    [
+      "GlobalTheory",
+      "abelianDeRham"
+    ]
+  ],
+  "attempt": 1,
+  "author": "nikete",
+  "axioms": [
+    "Classical.choice",
+    "Quot.sound",
+    "propext"
+  ],
+  "axioms_scope": "pinned-export-upper-bound",
+  "certificate_sha256": "968e89a4b5a792ed9afe98d4802e3bda574b3f9d5ae4b625d972bcc3d0f06e0b",
+  "commit": "f913b325a41554d99b03f544b4a31c602489f8de",
+  "helpers": 0,
+  "hole": "PositivityTheory.DualRT.abelianDeRham",
+  "impact": {
+    "private_nodes": 2,
+    "shared": {},
+    "version": 1
+  },
+  "issue": 10,
+  "nodes": 2,
+  "reuse_donor": "GlobalTheory.abelianDeRham",
+  "reuse_statement_id": 724118189,
+  "reuse_universe_parameters": [],
+  "run": 44917009700,
+  "season": "1",
+  "source_sha256": "8377b9d44a457bf36eec3afcb581f1bcd5f44370bf3814bd72d7930712b2cb40",
+  "standalone_rh_nodes": 2497533945,
+  "status": "accepted",
+  "submitted": "2026-11-21T15:02:09Z",
+  "verifier": "pinned-export-exact-reuse-v1"
+}
