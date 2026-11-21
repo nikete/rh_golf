@@ -1,0 +1,16 @@
+{
+  "attempt": 1,
+  "author": "nikete",
+  "axioms": [],
+  "certificate_sha256": "ce79e57a75290d47de56fcab88572bb13a7edb70e8c567856a8c852d04ffba18",
+  "commit": "f1046a1852428d9aa073df7b8fb46c782cb70837",
+  "helpers": 0,
+  "hole": "window-logic",
+  "issue": 2,
+  "nodes": 94,
+  "run": 44888468009,
+  "season": "1",
+  "source_sha256": "1032a9b11cb3429581691c2ea7839cfe48a1cc3d40a13987b308496ab60229b9",
+  "status": "accepted",
+  "submitted": "2026-11-21T09:12:23Z"
+}
