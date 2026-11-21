@@ -5,6 +5,7 @@ on:
     paths:
       - 'judge/baseline/**'
       - 'judge/baseline.json'
+      - 'judge/prepare.sh'
       - 'judge/reuse/build.py'
       - 'judge/reuse/index.lock.json'
       - 'judge/reuse/signatures.jsonl.gz'

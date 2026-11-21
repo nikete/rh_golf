@@ -43,7 +43,7 @@ else
   lake build League
 fi
 bash judge/prepare_exporter.sh
-(cd judge; LEAN_PATH="$root/.lake/build/lib/lean" lean -o "$root/.lake/build/lib/lean/GolfAuditExport.olean" GolfAuditExport.lean)
+(cd judge; LEAN_PATH="$root/.lake/build/lib/lean" lean -o "$root/.lake/build/lib/lean/GolfAuditExport.olean" "$root/judge/GolfAuditExport.lean")
 lake env lean judge/Extract.lean
 lake env lean judge/Replay.lean
 # Mathlib's cache extracts some artifacts with mode 0600. Public submissions read
