@@ -1,0 +1,27 @@
+{
+  "attempt": 1,
+  "author": "nikete",
+  "axioms": [
+    "propext",
+    "Classical.choice",
+    "Quot.sound"
+  ],
+  "certificate_sha256": "d90f57b75aae046557346f8f44a2edce019864932d2890e760d3662f851aefe5",
+  "commit": "75384bd0061f87dbd2313a71cf6e7ad20612063c",
+  "helpers": 0,
+  "hole": "reflection",
+  "impact": {
+    "private_nodes": 1026,
+    "shared": {
+      "Golf.Reflection._proof_1": 30
+    },
+    "version": 1
+  },
+  "issue": 6,
+  "nodes": 1025,
+  "run": 44905825098,
+  "season": "1",
+  "source_sha256": "f0a2c8ef7b5e6f648c0b3cdd2e3f7146923d594870bbe53a81e8e03fabd7ad58",
+  "status": "accepted",
+  "submitted": "2026-11-21T12:49:40Z"
+}
