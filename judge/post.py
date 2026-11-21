@@ -13,7 +13,8 @@ BRANCH = "golf-scores"
 def git(cwd, *args, check=True):
     return subprocess.run(["git", "-C", str(cwd), *args], check=check, text=True, capture_output=True)
 
-def publish(event, receipt):
+def update_ledger(write, message):
+    """Apply a trusted writer against the newest ledger on every push retry."""
     for attempt in range(12):
         with tempfile.TemporaryDirectory() as dirname:
             work = Path(dirname)
@@ -30,12 +31,12 @@ def publish(event, receipt):
             try:
                 if result.returncode == 2:
                     git(work, "switch", "--orphan", "scores-init-" + os.environ["GITHUB_RUN_ID"])
-                record(event, receipt, work / "ledger")
+                write(work / "ledger")
                 git(work, "add", "ledger")
                 if git(work, "diff", "--cached", "--quiet", check=False).returncode == 0:
                     return
                 git(work, "-c", "user.name=RH Golf", "-c", "user.email=41898282+github-actions[bot]@users.noreply.github.com",
-                    "commit", "-m", f"Record issue #{event['issue']['number']}")
+                    "commit", "-m", message)
                 pushed = git(work, "push", "origin", "HEAD:refs/heads/" + BRANCH, check=False)
                 if not pushed.returncode:
                     return
@@ -47,6 +48,10 @@ def publish(event, receipt):
                     git(home, "branch", "-D", "scores-init-" + os.environ["GITHUB_RUN_ID"], check=False)
         time.sleep(min(12, attempt + 1))
     raise RuntimeError("Ledger was busy; rerun this workflow to record the verified entry.")
+
+def publish(event, receipt):
+    update_ledger(lambda ledger: record(event, receipt, ledger), f"Record issue #{event['issue']['number']}")
+
 
 if __name__ == "__main__":
     publish(json.loads(Path(os.environ["GITHUB_EVENT_PATH"]).read_text()), Path(sys.argv[1]))

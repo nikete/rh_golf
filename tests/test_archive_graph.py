@@ -182,9 +182,9 @@ class CompletePortfolioTests(unittest.TestCase):
                     portfolio_coverage=dict(submitted=1000, reachable=900, bypassed=100))
 
     def score(self, rows, graph=None):
-        from impact import score_project
+        from impact import provisional_project
         refs = {"reflection": {"impact": dict(version=1, private_nodes=100, shared={})}}
-        return score_project(rows, refs, dict(archive_nodes=1000, spine_nodes=800, composition_nodes=4), graph)
+        return provisional_project(rows, refs, dict(archive_nodes=1000, spine_nodes=800, composition_nodes=4), graph)
 
     def test_complete_receipt_needs_no_replay_or_graph(self):
         project, credits = self.score([self.bulk(6, 886), self.bulk(8, 886), self.bulk(9, 830)], graph=object())

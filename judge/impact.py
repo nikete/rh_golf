@@ -24,7 +24,7 @@ class Route:
     entries: tuple = ()
 
 
-def score_project(rows, refs, baseline, graph=None):
+def provisional_project(rows, refs, baseline, graph=None):
     archive = baseline["archive_nodes"]
     spine = baseline["spine_nodes"]
     if not 0 < spine < archive:
@@ -132,6 +132,69 @@ def score_project(rows, refs, baseline, graph=None):
         "winning_route": winner.kind, "bundle_warnings": bundle_warnings,
         "winning_issues": winner.entries, "history": history, "pending_issues": pending,
     }, dict(credit)
+
+
+def score_project(rows, refs, baseline, graph=None, *, audit_dir=None):
+    """Replay only independently checked complete routes in entry-number order."""
+    import hashlib
+    import json
+    from route_audit import make_subject, subject_id, validate_attestation
+    audits, errors = [], {}
+    for path in sorted(audit_dir.glob("*.json")) if audit_dir else ():
+        try:
+            evidence = json.loads(path.read_text())
+            declared = evidence["subject"]
+            issues = [r["issue"] for r in declared["entries"]]
+            actual = make_subject(rows, declared["route"], issues, declared["nodes"], baseline, refs=refs,
+                                  course_reflection=declared["course_reflection"] is not None, graph=graph)
+            for entry in actual["entries"]:
+                source = audit_dir.parent / str(entry["issue"]) / "Entry.lean"
+                if hashlib.sha256(source.read_bytes()).hexdigest() != entry["source_sha256"]:
+                    raise ValueError("Submitted ledger source differs from its audited digest")
+            key = subject_id(actual)
+            if path.name != key + ".json":
+                raise ValueError("Wrong subject filename")
+            validate_attestation(evidence, actual)
+            audits.append({"subject_id": key, "route": actual["route"], "nodes": actual["nodes"],
+                           "entries": tuple(sorted(issues)), "course_reflection": actual["course_reflection"] is not None,
+                           "run": evidence["run"], "attempt": evidence["attempt"],
+                           "solution_sha256": evidence["solution_sha256"]})
+        except (ValueError, KeyError, TypeError, OSError) as exc:
+            # A broken or stale sidecar cannot award points or hide good receipts.
+            errors[path.name] = str(exc)
+
+    archive = start = current = baseline["archive_nodes"]
+    winner = Route("archive", archive)
+    history, credits = [], defaultdict(int)
+    # Audit arrival order cannot change attribution. At each issue use the
+    # smallest certified complete route which its participants made available.
+    audits.sort(key=lambda a: (max(a["entries"], default=0), a["nodes"], a["entries"], a["subject_id"]))
+    for audit in audits:
+        entries = audit["entries"]
+        cost = audit["nodes"]
+        if cost >= current:
+            continue
+        if not entries:
+            start = current = cost
+            winner = Route("course-reflection", cost)
+            continue
+        beneficiaries = [i for i in entries if i not in winner.entries] or list(entries)
+        gain = current - cost
+        quotient, remainder = divmod(gain, len(beneficiaries))
+        awards = {i: quotient + int(k < remainder) for k, i in enumerate(beneficiaries)}
+        for i, award in awards.items():
+            credits[i] += award
+        history.append({"issue": max(entries), "route": audit["route"], "entries": entries,
+                        "before_nodes": current, "after_nodes": cost, "saved_nodes": gain,
+                        "credits": awards, "audit_subject": audit["subject_id"]})
+        winner, current = Route(audit["route"], cost, entries), cost
+    covered = {i for audit in audits for i in audit["entries"]}
+    return {"metric": baseline.get("metric", "rh-declaration-nodes-v1"), "root": "riemannHypothesis",
+            "archive_nodes": archive, "starting_nodes": start, "current_nodes": current,
+            "saved_nodes": archive - current, "course_saved_nodes": archive - start,
+            "community_saved_nodes": start - current, "winning_route": winner.kind,
+            "winning_issues": winner.entries, "history": history, "audits": audits, "invalid_audits": errors,
+            "pending_issues": sorted(r["issue"] for r in rows if r["issue"] not in covered)}, dict(credits)
 
 
 def attach_measurements(rows, backfills):

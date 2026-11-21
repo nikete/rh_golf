@@ -40,10 +40,11 @@ class NamedSiteTests(unittest.TestCase):
             self.assertIn("Complete RH nodes", root)
             self.assertIn("pinned-export-exact-reuse-portfolio-v1", root)
             scores = json.loads((work / "site/scores.json").read_text())
-            best = scores["personal_bests"]["riemann"]
+            best = scores["provisional_personal_bests"]["riemann"]
             self.assertEqual([(r["issue"], r["nodes"], r["complete_rh_nodes"]) for r in best],
                              [(92, 10, 180), (93, 2, 190)])
-            self.assertEqual(scores["records"]["riemann"], 180)
+            self.assertEqual(scores["provisional_records"]["riemann"], 180)
+            self.assertEqual(scores["records"]["riemann"], scores["project"]["archive_nodes"])
 
     def test_named_entries_render_without_legacy_headroom(self):
         baseline = json.loads((ROOT / "judge/baseline.json").read_text())
@@ -92,5 +93,6 @@ class NamedSiteTests(unittest.TestCase):
             self.assertIn("rules.html#reuse", page)
             scores = json.loads((work / "site/scores.json").read_text())
             results = {r["hole"]: (r["standalone_saved_nodes"], r["points"]) for r in scores["accepted"]}
-            self.assertEqual(results, {target: (1990, 1990), "Unused": (0, 0)})
-            self.assertIsNone(scores["project"]["reflection_headroom_nodes"])
+            self.assertEqual(results, {target: (1990, 0), "Unused": (0, 0)})
+            self.assertEqual(scores["accepted"][0]["provisional_points"], 1990)
+            self.assertIsNone(scores["provisional_project"]["reflection_headroom_nodes"])

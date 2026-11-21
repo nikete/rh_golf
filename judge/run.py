@@ -196,9 +196,11 @@ def judge_manifest(hole, original, body, nominations):
     return score
 
 
-def judge(hole, text, trusted_example=False):
+def judge(hole, text, trusted_example=False, certificate_output=None):
     original = validate_source(text)
     portfolio, src = directives(original)
+    if certificate_output is not None and (src.startswith("reuse-file") or REUSE.fullmatch(src)):
+        raise Rejected("Certificate output requires a Lean source entry.")
     if src.startswith("reuse-file"):
         return judge_manifest(hole, original, src, portfolio)
     fast = FAST_NAMES.get(hole, hole)
@@ -252,6 +254,9 @@ def judge(hole, text, trusted_example=False):
             except (ValueError, KeyError) as exc:
                 raise Rejected(f"Invalid archive dependency: {exc}") from exc
             score["archive_module"] = module
+        if certificate_output is not None:
+            certificate_output.parent.mkdir(parents=True, exist_ok=True)
+            certificate_output.write_bytes(cert.read_bytes())
         return {**score, **({"combine": portfolio} if portfolio else {}),
                 "source_sha256": hashlib.sha256(original.encode()).hexdigest(),
                 "certificate_sha256": hashlib.sha256(cert.read_bytes()).hexdigest()}
@@ -279,6 +284,7 @@ def main():
     parser.add_argument("--source", type=Path)
     parser.add_argument("--preflight", action="store_true", help="Report whether this issue needs a Lean runner")
     parser.add_argument("--output", type=Path)
+    parser.add_argument("--certificate-output", type=Path, help="Save the accepted inert Lean certificate")
     parser.add_argument("--reference", action="store_true", help="Only for checked-in maintainer examples")
     args = parser.parse_args()
     if args.preflight:
@@ -308,7 +314,7 @@ def main():
                 path = next((h.get("example") for h in CONFIG if h["id"] == hole), None)
                 if not path or args.source.resolve() != (ROOT / path).resolve():
                     parser.error("--reference only accepts the checked-in example for this hole")
-        result = {"status": "accepted", "hole": hole, "season": SEASON, **judge(hole, src, args.reference)}
+        result = {"status": "accepted", "hole": hole, "season": SEASON, **judge(hole, src, args.reference, args.certificate_output)}
     except Rejected as exc:
         result = {"status": "rejected", "reason": " ".join(str(exc).split())[-1000:]}
     except (RuntimeError, subprocess.SubprocessError, OSError) as exc:

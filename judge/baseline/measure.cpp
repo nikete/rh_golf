@@ -11,6 +11,7 @@
 #include <queue>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -30,7 +31,11 @@ template<class T> struct File {
     struct stat st{};
     if (fd < 0 || fstat(fd, &st) < 0 || st.st_size % sizeof(T)) throw std::runtime_error(path);
     size = st.st_size / sizeof(T);
-    data = size ? static_cast<const T*>(mmap(nullptr, st.st_size, PROT_READ, MAP_PRIVATE | (prefetch ? MAP_POPULATE : 0), fd, 0)) : nullptr;
+    int flags = MAP_PRIVATE;
+#ifdef MAP_POPULATE
+    if (prefetch) flags |= MAP_POPULATE;
+#endif
+    data = size ? static_cast<const T*>(mmap(nullptr, st.st_size, PROT_READ, flags, fd, 0)) : nullptr;
     close(fd);
     if (data == MAP_FAILED) throw std::runtime_error("mmap " + path);
   }
@@ -183,6 +188,12 @@ int main(int argc, char** argv) {
       std::cout << '\n';
     }
     if (!std::cin.eof()) throw std::runtime_error("malformed expression ID list");
+    return 0;
+  }
+  if (argc == 4 && std::string_view(argv[2]) == "--root-only") {
+    Graph graph(argv[1]);
+    auto [nodes, groups] = graph.total(std::stoul(argv[3]), 0);
+    std::cout << "{\"nodes\":" << nodes << ",\"groups\":" << groups << "}\n";
     return 0;
   }
   if (argc != 7) return 2;

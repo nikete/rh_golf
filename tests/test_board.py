@@ -8,7 +8,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "judge"))
-from board import record, render, standings
+from board import record, render, provisional_standings
 from run import Rejected, directives, event_submission
 
 class BoardTests(unittest.TestCase):
@@ -19,7 +19,7 @@ class BoardTests(unittest.TestCase):
     def scoring(self, rows):
         refs = {"reflection": self.row("course", 100, 0)}
         baseline = dict(archive_nodes=1000, spine_nodes=800, composition_nodes=4)
-        return standings(rows, refs, baseline)
+        return provisional_standings(rows, refs, baseline)
 
     def test_only_new_global_records_earn_points(self):
         rows = [self.row("a", 70, 1), self.row("b", 70, 2), self.row("b", 50, 3),
@@ -95,7 +95,8 @@ class BoardTests(unittest.TestCase):
                 render(p/"ledger", p/"site")
                 data = json.loads((p/"site/scores.json").read_text())
                 self.assertEqual(len(data["accepted"]), 1)
-                self.assertEqual(data["players"][0]["points"], 0)
+                self.assertEqual(data["players"], [])
+                self.assertEqual(data["accepted"][0]["points"], 0)
                 self.assertEqual(data["project"]["pending_issues"], [19])
                 self.assertEqual((p/"site/proofs/19.lean").read_text(), source)
                 self.assertIn("player", (p/"site/index.html").read_text())

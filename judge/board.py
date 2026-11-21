@@ -3,7 +3,7 @@ import argparse
 from collections import defaultdict
 from archive_portfolio import PORTFOLIO_VERIFIER
 from fetch_graph import UPSTREAM, read_pin, release_tag
-from impact import attach_measurements, footprint_size, score_project, validate_impact
+from impact import attach_measurements, footprint_size, provisional_project, score_project, validate_impact
 from html import escape as esc
 import json
 import os
@@ -51,8 +51,7 @@ def chosen(rows):
     return list(best.values())
 
 
-def standings(rows, refs, baseline, graph=None):
-    project, credits = score_project(rows, refs, baseline, graph)
+def rank_targets(rows, refs, credits):
     pars = {hole: size for hole, r in refs.items() if (size := record_size(r)) is not None}
     hole_credits = defaultdict(int)
     for row in rows:
@@ -73,7 +72,23 @@ def standings(rows, refs, baseline, graph=None):
         player["holes"] += 1
         player["points"] += points
     leaders = sorted(players.values(), key=lambda p: (-p["points"], p["author"].lower()))
-    return pars, holes, leaders, project, credits
+    return pars, holes, leaders
+
+
+def standings(rows, refs, baseline, graph=None, *, audit_dir=None):
+    """Official results concern complete RH routes with independent evidence."""
+    project, credits = score_project(rows, refs, baseline, graph, audit_dir=audit_dir)
+    covered = {i for a in project["audits"] for i in a["entries"]}
+    _, _, leaders = rank_targets([r for r in rows if r["issue"] in covered], {}, credits)
+    singletons = {a["entries"][0] for a in project["audits"] if len(a["entries"]) == 1 and not a["course_reflection"]}
+    roots = [r for r in rows if r["issue"] in singletons and target_key(r["hole"]) == "riemann"]
+    _, root_bests, _ = rank_targets(roots, {}, credits)
+    return {"riemann": project["current_nodes"]}, root_bests, leaders, project, credits
+
+
+def provisional_standings(rows, refs, baseline, graph=None):
+    project, credits = provisional_project(rows, refs, baseline, graph)
+    return *rank_targets(rows, refs, credits), project, credits
 
 
 def run_url(r):
@@ -169,24 +184,43 @@ def fmt(n):
     return f"{n:,}"
 
 
+def historic_measurements():
+    if REPO.lower() != UPSTREAM.lower():
+        return {}
+    return json.loads((ROOT / "judge/historic_impact.json").read_text())
+
+
+def read_ledger_row(file, backfills):
+    row = json.loads(file.read_text())
+    supplement = file.with_name("impact.json")
+    if supplement.exists():
+        row, = attach_measurements([row], {str(row["issue"]): json.loads(supplement.read_text())})
+    row, = attach_measurements([row], backfills)
+    validate_row(row)
+    if str(row["issue"]) != file.parent.name:
+        raise ValueError("Ledger directory and issue number differ")
+    return row
+
+
 def render(ledger, output):
-    rows = []
-    for file in sorted((ledger / SEASON).glob("*/score.json")):
-        r = json.loads(file.read_text())
-        supplement = file.with_name("impact.json")
-        if supplement.exists():
-            r, = attach_measurements([r], {str(r["issue"]): json.loads(supplement.read_text())})
-        validate_row(r)
-        rows.append(r)
+    backfills = historic_measurements()
+    rows = [read_ledger_row(file, backfills) for file in sorted((ledger / SEASON).glob("*/score.json"))]
     refs = {r["hole"]: r for r in json.loads((ROOT / "judge/references.json").read_text())}
     baseline = json.loads((ROOT / "judge/baseline.json").read_text())
-    backfills = json.loads((ROOT / "judge/historic_impact.json").read_text())
-    if REPO.lower() == "nikete/rh_golf":
-        rows = attach_measurements(rows, backfills)
     graph = open_graph() if any("archive_deps" in row for row in rows) else None
-    pars, holes, leaders, project, credits = standings(rows, refs, baseline, graph)
+    pars, holes, _, measured, estimates = provisional_standings(rows, refs, baseline, graph)
+    audit_dir = ledger / SEASON / "audits"
+    official_records, official_bests, leaders, project, credits = standings(rows, refs, baseline, graph, audit_dir=audit_dir)
+    audits_for = defaultdict(list)
+    for audit in project["audits"]:
+        for issue in audit["entries"]:
+            audits_for[issue].append(audit)
     for r in rows:
-        r["points"] = credits.get(r["issue"], 0)
+        issue = r["issue"]
+        r["points"] = credits.get(issue, 0)
+        r["provisional_points"] = estimates.get(issue, 0)
+        r["audit_status"] = "certified-route" if issue in audits_for else "pending"
+        r["audit_subjects"] = [a["subject_id"] for a in audits_for[issue]]
     output.mkdir(parents=True, exist_ok=True)
     for file in ("style.css", "identity.svg", "critical-strip.svg", "copy-prompt.js"):
         shutil.copyfile(ROOT / "site" / file, output / file)
@@ -201,7 +235,7 @@ def render(ledger, output):
         [[str(rank), player(p), str(p["holes"]), f"<strong>{fmt(p['points'])}</strong>",
           f"{100*p['points']/project['archive_nodes']:.8f}%"]
          for rank, p in ordinal(leaders, "points")],
-        "The first accepted entry opens the standings. Course references earn no player points.")
+        "No player has a certified complete route yet.")
     entry_url = GITHUB + "/issues/new?template=entry.md"
     archive_url = "https://github.com/Deicyde/riemann-hypothesis/tree/40e56bab026552e089d7afcfeff08d2defb9c005/src"
     graph_url = f"https://github.com/{UPSTREAM}/releases/tag/{release_tag(read_pin())}"
@@ -234,7 +268,7 @@ def render(ledger, output):
             label = f"#{issue}" if saved is None else f"#{issue} · {fmt(saved)} saved"
             status = link(f"{GITHUB}/issues/{issue}", label)
         featured.append([name, fmt(weight), status, link(f"{large_sources}/{source}", source.split("#")[0] + " ↗")])
-    large_targets = elem_table(["Declaration", "Original local nodes", "Best standalone entry", "Source"], featured, "")
+    large_targets = elem_table(["Declaration", "Original local nodes", "Best provisional standalone entry", "Source"], featured, "")
 
     def standalone_cell(row):
         savings = row["standalone_saved_nodes"]
@@ -256,7 +290,11 @@ def render(ledger, output):
             reuse = method == "pinned-export-exact-reuse-v1"
             source = link(f"proofs/{issue}.lean", "Instruction" if reuse else "Proof")
             receipt = link(run_url(row), "Export receipt" if reuse else "CI receipt")
-        return source + " · " + receipt
+        links = [source, receipt]
+        for audit in audits_for[issue]:
+            links.append(link(f"audits/{audit['subject_id']}.json", "Route audit"))
+            links.append(link(run_url(audit), "Audit job"))
+        return " · ".join(links)
 
     def accepted_entry(row):
         issue = row["issue"]
@@ -270,19 +308,23 @@ def render(ledger, output):
         elif row.get("verifier") == "pinned-export-exact-reuse-v1":
             target += "<br><small>Reuses " + esc(row["reuse_donor"]) + "</small>"
         return [link(f"{GITHUB}/issues/{issue}", f"#{issue}"), target, player(row), local_size,
-                standalone_cell(row), fmt(row["points"]), evidence_links(row)]
+                standalone_cell(row), fmt(row["provisional_points"]), fmt(row["points"]),
+                "Certified route" if row["audit_status"] == "certified-route" else "Pending", evidence_links(row)]
 
-    entries_table = elem_table(["Entry", "Target", "Player", "Local nodes", "Nodes saved alone", "Points earned", "Evidence"],
+    entries_table = elem_table(["Entry", "Target", "Player", "Local nodes", "Estimated nodes saved alone", "Provisional points", "Certified points", "Audit", "Evidence"],
         [accepted_entry(r) for r in sorted(rows, key=lambda r: r["issue"], reverse=True)],
         "The first accepted replacement will appear here.")
     pct = 100 * project["saved_nodes"] / project["archive_nodes"]
-    total_panel = f"""<section id='progress'><div class='sectionhead'><h2>Whole-proof progress</h2>
-      {link(GITHUB + '/blob/main/judge/baseline.json', 'Baseline receipt ↗')}</div>
+    total_panel = f"""<section id='progress'><div class='sectionhead'><h2>Certified whole-proof progress</h2>
+      {link(GITHUB + '/blob/main/judge/baseline.json', 'Baseline receipt ↗')} ·
+      {link(GITHUB + '/blob/main/judge/audit/policy.json', 'Independent check policy ↗')}</div>
       <div class='footprints'><div><small>Original ordinary RH</small><strong>{fmt(project['archive_nodes'])}</strong></div>
-      <div><small>Current complete proof</small><strong>{fmt(project['current_nodes'])}</strong></div>
+      <div><small>Certified complete proof</small><strong>{fmt(project['current_nodes'])}</strong></div>
       <div><small>Nodes removed</small><strong>{fmt(project['saved_nodes'])}</strong></div></div>
       <p>{pct:.8f}% of the original proof. The opening reference saved {fmt(project['course_saved_nodes'])} nodes.
-      Players have contributed {fmt(project['community_saved_nodes'])} more.</p></section>"""
+      Players have contributed {fmt(project['community_saved_nodes'])} more.</p>
+      <p>The best provisional measurement is <strong>{fmt(measured['current_nodes'])} nodes</strong>.
+      Proposed routes earn points after independent checks of the exact complete proof.</p></section>"""
     accounts = {r["issue"]: r["author"] for r in rows}
     changes = []
     for h in reversed(project["history"]):
@@ -311,7 +353,7 @@ def render(ledger, output):
         history_table = "<h3>Record improvements</h3>" + elem_table(
             ["Entry", "Target", "Before", "After", "Credit"], changes, "")
     if project["pending_issues"]:
-        history_table += "<p>Awaiting whole-proof replay: " + ", ".join(
+        history_table += "<p>Entries awaiting an independent complete-route audit: " + ", ".join(
             link(f"{GITHUB}/issues/{i}", f"#{i}") for i in project["pending_issues"]) + ".</p>"
     readme = (ROOT / "README.md").read_text()
     section = readme.split("## Start an agent\n", 1)[1].split("\n## ", 1)[0]
@@ -319,7 +361,7 @@ def render(ledger, output):
     (output / "agent-prompt.txt").write_text(prompt + "\n")
     page("index.html", "RH Golf · Riemann proof league", f"""
     <section class='hero'><div class='herocopy'>
-    <h1>Riemann<br><em>Proof Golf</em></h1><p class='intro'>Shrink a theorem or definition anywhere in the Lean proof of the Riemann hypothesis. Each node removed from the complete proof earns one point.</p>
+    <h1>Riemann<br><em>Proof Golf</em></h1><p class='intro'>Shrink a theorem or definition anywhere in the Lean proof of the Riemann hypothesis. Each node removed from the independently certified complete proof earns one point.</p>
     <div class='buttons'><a class='primary' href='{entry_url}'>Submit a replacement ↗</a>
     <a class='plain' href='#agent'>Play with an agent →</a></div></div>
     <figure><img src='critical-strip.svg' width='530' height='322' alt='The critical line at real part one half, with the first three positive zeta zero heights marked.'>
@@ -348,18 +390,18 @@ def render(ledger, output):
     <p>Ordinary RH uses both declarations. Each count measures the original declaration’s type and proof body.
     The points you earn depend on which dependencies your replacement still uses and how much it improves the current record.</p>{large_targets}
     <p>Copy a declaration name into your issue title after <b>[entry]</b>. These modules have large import trees. Building one from scratch can exceed the hosted runner’s time or memory limit. <a href='rules.html'>Entry limits →</a></p></section>
-    <section id='standings'><div class='sectionhead'><h2>Leaderboard</h2><span>{len(leaders)} players</span></div>
+    <section id='standings'><div class='sectionhead'><h2>Certified leaderboard</h2><span>{len(leaders)} players</span></div>
     {leaderboard}{history_table}</section>
-    <section id='entries'><div class='sectionhead'><h2>Accepted entries</h2><span>{len(rows)} proofs</span></div><p>Nodes saved alone compares each replacement with the untouched archive. Points earned measure the improvement over the best complete proof at the time.</p>{entries_table}</section>""")
+    <section id='entries'><div class='sectionhead'><h2>Submissions and audits</h2><span>{len(rows)} proofs</span></div><p>Provisional measurements and their historical point estimates remain available while the complete proofs await independent checks. Certified points follow the audited record in issue order.</p>{entries_table}</section>""")
     for h in CONFIG:
         k = h["id"]
         size_key = "complete_rh_nodes" if k == "riemann" else "nodes"
         size_label = "Complete RH nodes" if k == "riemann" else "Local nodes"
-        record_title = "Complete proof records" if k == "riemann" else "Local records"
-        measured = (r for r in holes[k] if r.get(size_key) is not None)
+        record_title = "Provisional complete proof measurements" if k == "riemann" else "Provisional local measurements"
+        measured_entries = (r for r in holes[k] if r.get(size_key) is not None)
         ranks = [[str(rank), player(r), fmt(r[size_key]), str(r["points"]), evidence_links(r)]
-                 for rank, r in ordinal(measured, size_key)]
-        standings_html = elem_table(["Rank", "Player", size_label, "RH nodes credited", "Evidence"], ranks, "No measured entries yet.")
+                 for rank, r in ordinal(measured_entries, size_key)]
+        standings_html = elem_table(["Rank", "Player", size_label, "Provisional points", "Evidence"], ranks, "No measured entries yet.")
         ref = refs.get(k)
         if ref:
             benchmark = f"""<div class='benchmark'><span>Course reference</span><strong>{fmt(ref['nodes'])} nodes</strong>
@@ -373,8 +415,8 @@ def render(ledger, output):
             "prime-supply": "This entry joins the criterion taking the estimate to RH. The pair can bypass the archive’s full nonvanishing argument.",
             "riemann": "A compact unconditional proof competes against the entire current RH proof."
         }[k]
-        if k == "reflection" and project.get("reflection_headroom_nodes") is not None:
-            note += (f" Changing this step alone could save at most {fmt(project['reflection_headroom_nodes'])} "
+        if k == "reflection" and measured.get("reflection_headroom_nodes") is not None:
+            note += (f" Changing this step alone could save at most {fmt(measured['reflection_headroom_nodes'])} "
                      "more nodes against the current complete-proof record.")
         page(k + ".html", h["name"] + " · RH Golf", f"""
           <section class='inner'><a class='back' href='index.html#entries'>← Entries</a><p class='eyebrow'>{esc(h['class'])}</p>
@@ -392,9 +434,20 @@ def render(ledger, output):
     proofs.mkdir(exist_ok=True)
     for r in rows:
         shutil.copyfile(ledger / SEASON / str(r["issue"]) / "Entry.lean", proofs / f"{r['issue']}.lean")
+    audit_output = output / "audits"
+    audit_output.mkdir(exist_ok=True)
+    valid_subjects = {a["subject_id"] for a in project["audits"]}
+    for stale in audit_output.glob("*.json"):
+        if stale.stem not in valid_subjects:
+            stale.unlink()
+    for audit in project["audits"]:
+        name = audit["subject_id"] + ".json"
+        shutil.copyfile(audit_dir / name, audit_output / name)
     (output / "scores.json").write_text(json.dumps({"season": SEASON, "course_commit": os.getenv("COURSE_COMMIT"), "project": project,
         "holes": CONFIG, "references": refs,
-        "records": pars, "players": leaders, "personal_bests": dict(holes), "accepted": rows}, indent=2) + "\n")
+        "records": official_records, "personal_bests": dict(official_bests), "players": leaders,
+        "provisional_project": measured, "provisional_records": pars, "provisional_personal_bests": dict(holes),
+        "pending": project["pending_issues"], "accepted": rows}, indent=2) + "\n")
 
 
 if __name__ == "__main__":

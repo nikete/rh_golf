@@ -74,6 +74,8 @@ def search(graph, encoded, patches, best, trials, seed):
     choices = ranked[:top] + random.Random(seed).sample(rest, min(len(rest), trials - top))
     wanted = {g for _, target, donor, _, _ in choices for g in (target, donor)}
     names = {g: name for name, g in graph.names.items() if g in wanted}
+    if not choices:
+        print("No eligible pair in this search strategy.")
     closest = None
     for i, (_, target, donor, nodes, deps) in enumerate(choices, 1):
         edited = patches.copy()
@@ -89,6 +91,8 @@ def search(graph, encoded, patches, best, trials, seed):
         closest = cost if closest is None else min(closest, cost)
         print(f"Trial {i}: {cost:,} nodes ({best - cost:+,} vs local best)", flush=True)
         if cost < best:
+            label = ".".join(str(part) for part in json.loads(names[target]))
+            print(f"  Improved {label}", flush=True)
             patches, best = edited, cost
             encoded.pop(donor, None)
             encoded[target] = b"[" + names[target] + b"," + names[donor] + b"]"
@@ -104,7 +108,7 @@ def write_candidate(encoded):
     with tempfile.NamedTemporaryFile(dir=folder, delete=False) as temp:
         path = Path(temp.name)
     try:
-        with path.open("wb") as output, gzip.GzipFile(filename="", fileobj=output, mode="wb", mtime=0) as packed:
+        with path.open("wb") as output, gzip.GzipFile(filename="", fileobj=output, mode="wb", mtime=0, compresslevel=9) as packed:
             for group in sorted(encoded):
                 packed.write(encoded[group] + b"\n")
         if path.stat().st_size > MAX_COMPRESSED:
@@ -128,15 +132,15 @@ def main():
     if args.trials < 1:
         parser.error("--trials must be positive")
     seed = args.seed if args.seed is not None else secrets.randbits(32)
-    print(f"Seed: {seed}; up to {args.trials} trials.", flush=True)
+    print(f"Seed {seed}, up to {args.trials} trials.", flush=True)
     with urlopen(Request(SCORES, headers={"User-Agent": "RH-Golf-agent-round"}), timeout=30) as response:
         board = json.load(response)
-    project = board["project"]
+    project = board.get("provisional_project", board["project"])
     record = project["current_nodes"]
     portfolios = [row for row in board["accepted"] if row.get("verifier") == METHOD]
     row = min(portfolios, key=lambda r: (r["standalone_rh_nodes"], r["issue"]), default=None)
     source = f"portfolio #{row['issue']}" if row else "the untouched archive"
-    print(f"Public record: {record:,} nodes. Starting from {source}.", flush=True)
+    print(f"Best measured RH proof: {record:,} nodes. Starting from {source}.", flush=True)
     subprocess.run([sys.executable, str(ROOT / "judge/fetch_graph.py")], check=True)
     graph = ArchiveGraph(OUT / "archive-graph")
     if graph.baseline != project["archive_nodes"] or project["metric"] != "rh-declaration-nodes-v1":
@@ -145,14 +149,14 @@ def main():
     print(f"Verified starting proof: {start:,} nodes.", flush=True)
     cost, closest = search(graph, encoded, patches, start, args.trials, seed)
     if cost >= record:
-        print(f"No new record. Best local proof: {cost:,} nodes. Public record: {record:,}.")
+        print(f"No new record. Best local proof: {cost:,} nodes. Best measured RH proof: {record:,}.")
         print(f"Closest valid trial: {closest:,} nodes." if closest is not None else "No valid trial in this sample.")
         return
     result = verify_portfolio((json.loads(line) for line in encoded.values()), graph)
     if result["standalone_rh_nodes"] != cost:
         raise RuntimeError("Final verification differs from the search measurement")
     path, digest = write_candidate(encoded)
-    print(f"Verified {record - cost:,} nodes saved against the public record ({cost:,} nodes).")
+    print(f"Measured {record - cost:,} nodes saved against the best public measurement ({cost:,} nodes).")
     print(f"Total saved from original: {graph.baseline - cost:,} nodes ({1 - cost / graph.baseline:.6%}).")
     print(f"Candidate: {path}\nSHA-256: {digest}\nCertificate: {result['certificate_sha256']}")
 

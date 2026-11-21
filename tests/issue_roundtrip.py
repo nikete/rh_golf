@@ -1,4 +1,5 @@
 """Exercise an issue-open snapshot through the public judge, Git ledger and static site."""
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -23,10 +24,31 @@ def main():
         folder = Path(dirname)
         event_file = folder / "event.json"
         event_file.write_text(json.dumps(issue))
+        certificate = folder / "certificate.json"
         subprocess.run([sys.executable, str(ROOT / "judge/run.py"), "--event", str(event_file),
-                        "--output", str(receipt)], check=True)
+                        "--output", str(receipt), "--certificate-output", str(certificate)], check=True)
         result = json.loads(receipt.read_text())
         assert result["status"] == "accepted", result
+        assert hashlib.sha256(certificate.read_bytes()).hexdigest() == result["certificate_sha256"]
+        assert hashlib.sha256((source.rstrip() + "\n").encode()).hexdigest() == result["source_sha256"]
+        saved = folder / "submitted.lean"
+        saved.write_text(source)
+        cmd = [sys.executable, str(ROOT / "judge/export_candidate.py"), "--target", "window-logic",
+               "--source", str(saved), "--certificate", str(certificate), "--receipt", str(receipt),
+               "--output", str(folder / "solution.ndjson"), "--challenge", str(folder / "challenge.ndjson")]
+        export = json.loads(subprocess.check_output(cmd, text=True))
+        assert export["scope"] == "declaration"
+        assert export["certificate_sha256"] == result["certificate_sha256"]
+        for name in ("solution", "challenge"):
+            data = (folder / (name + ".ndjson")).read_bytes()
+            assert hashlib.sha256(data).hexdigest() == export[name + "_sha256"]
+        saved.write_text(source + "\n-- different source\n")
+        mismatch = subprocess.run(cmd, capture_output=True, text=True)
+        assert mismatch.returncode and "match the accepted Lean receipt" in mismatch.stderr, mismatch
+        saved.write_text(source)
+        certificate.write_bytes(certificate.read_bytes() + b"\n")
+        mismatch = subprocess.run(cmd, capture_output=True, text=True)
+        assert mismatch.returncode and "match the accepted Lean receipt" in mismatch.stderr, mismatch
 
         remote = folder / "origin.git"
         source_repo = folder / "checkout"
@@ -53,7 +75,8 @@ def main():
         site = folder / "site"
         render(ledger / "ledger", site)
         scores = json.loads((site / "scores.json").read_text())
-        assert scores["players"] == [{"author": "fixture-player", "points": 0, "holes": 1}]
+        assert scores["players"] == []
+        assert scores["accepted"][0]["audit_status"] == "pending"
         assert scores["accepted"][0]["nodes"] == result["nodes"]
         assert (site / "proofs/7.lean").read_text() == source
         assert "fixture-player" in (site / "window-logic.html").read_text()

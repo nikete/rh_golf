@@ -1,0 +1,135 @@
+name: Certify a complete proof
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/audit.yml'
+      - 'judge/audit/policy.json'
+  workflow_dispatch:
+    inputs:
+      issue:
+        description: Number of the immutable entry to certify
+        required: true
+        type: number
+  workflow_run:
+    workflows: ["Judge a proof"]
+    types: [completed]
+permissions: {}
+jobs:
+  select:
+    if: github.ref == 'refs/heads/main' && (github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'issues'))
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    outputs:
+      issue: ${{ steps.candidate.outputs.issue }}
+      state: ${{ steps.candidate.outputs.state }}
+      method: ${{ steps.candidate.outputs.method }}
+      ledger: ${{ steps.candidate.outputs.ledger }}
+      hosted: ${{ steps.candidate.outputs.hosted }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          persist-credentials: false
+      - name: Resolve only a frozen tournament receipt
+        id: candidate
+        env:
+          ISSUE: ${{ inputs.issue }}
+          ORIGIN_RUN: ${{ github.event.workflow_run.id }}
+          FULL_RUNNER: ${{ vars.RH_AUDIT_RUNNER }}
+        run: |
+          git fetch -q --depth=1 origin refs/heads/golf-scores
+          echo "ledger=$(git rev-parse FETCH_HEAD)" >> "$GITHUB_OUTPUT"
+          git archive FETCH_HEAD ledger | tar xf -
+          if [[ -n "$ISSUE" ]]; then args=(--issue "$ISSUE")
+          elif [[ -n "$ORIGIN_RUN" ]]; then args=(--run "$ORIGIN_RUN")
+          else args=(--best)
+          fi
+          python3 judge/audit/candidate.py select --ledger ledger "${args[@]}"
+          if [[ -z "$FULL_RUNNER" ]] && ! grep -qx hosted=true "$GITHUB_OUTPUT"; then
+            echo "Pending independent audit. No full-export runner is configured." >> "$GITHUB_STEP_SUMMARY"
+          fi
+  reproduce:
+    needs: select
+    if: needs.select.outputs.state == 'ready' && (needs.select.outputs.hosted == 'true' || vars.RH_AUDIT_RUNNER != '')
+    runs-on: ${{ vars.RH_AUDIT_RUNNER || 'ubuntu-24.04' }}
+    timeout-minutes: 2880
+    strategy:
+      fail-fast: false
+      matrix:
+        replica: [a, b]
+    permissions:
+      contents: read
+    env:
+      ISSUE: ${{ needs.select.outputs.issue }}
+      LEDGER: ${{ needs.select.outputs.ledger }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          persist-credentials: false
+      - name: Start a fresh materialization at the pinned ledger revision
+        run: |
+          git fetch -q --depth=1 origin "$LEDGER"
+          git archive "$LEDGER" ledger | tar xf -
+          work=$(mktemp -d "$RUNNER_TEMP/rh-audit.XXXXXXXX")
+          echo "WORK=$work" >> "$GITHUB_ENV"
+          echo "AUDIT_TOOLS=$work/tools" >> "$GITHUB_ENV"
+      - if: contains(fromJSON('["root-lean","named-lean"]'), needs.select.outputs.method) || matrix.replica == 'b'
+        uses: ./.github/actions/prepare
+      - if: contains(fromJSON('["root-lean","named-lean"]'), needs.select.outputs.method)
+        run: docker pull "$(cat judge/image.txt)"
+      - name: Materialize the exact candidate and hash all output bytes
+        run: python3 judge/audit/candidate.py build --ledger ledger --issue "$ISSUE" --work "$WORK"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: build-${{ matrix.replica }}
+          path: ${{ env.WORK }}/build.json
+          if-no-files-found: error
+      - name: Independently recount the ordinary RH closure from the changed bytes
+        if: matrix.replica == 'b'
+        env:
+          MATHLIB_CACHE_GET_URL: https://cache.mathlib.org/mathlib4
+        run: |
+          export PATH="$PWD/.tools/lean-4.33.1-linux/bin:$PATH"
+          lake exe cache get Mathlib || lake exe cache get Mathlib
+          lake env lean --run judge/baseline/LibraryNames.lean | gzip -1 > "$WORK/library.jsonl.gz"
+          nodes=$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1]))["subject"]["nodes"])' "$WORK/build.json")
+          python3 judge/audit/measure_export.py --input "$WORK/solution.ndjson" --mathlib-names "$WORK/library.jsonl.gz" --work "$WORK/index" --expected "$nodes" --output "$WORK/count.json"
+      - name: Free the hosted course workspace after recount
+        if: matrix.replica == 'b' && vars.RH_AUDIT_RUNNER == ''
+        run: |
+          rm -rf .lake .tools/lean-4.33.1-linux
+          command -v bwrap || (sudo apt-get update -qq && sudo apt-get install -y bubblewrap)
+      - name: Check the challenge and the inert solution with the pinned checkers
+        if: matrix.replica == 'b'
+        run: |
+          bash judge/audit/toolchain.sh "$AUDIT_TOOLS"
+          bash judge/audit/challenge.sh "$WORK/challenge.ndjson"
+          bash judge/audit/check.sh "$WORK/challenge.ndjson" "$WORK/solution.ndjson" "$WORK/logs"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always() && matrix.replica == 'b'
+        with:
+          name: full-export-evidence
+          path: |
+            ${{ env.WORK }}/count.json
+            ${{ env.WORK }}/logs/
+      - name: Release temporary proof data
+        if: always()
+        run: |
+          if [[ -n "${WORK:-}" && "$WORK" == "$RUNNER_TEMP"/rh-audit.* ]]; then rm -rf -- "$WORK"; fi
+  record:
+    needs: [select, reproduce]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          path: .out/evidence
+      - name: Credit only reproducible, independently checked complete proof
+        env:
+          ISSUE: ${{ needs.select.outputs.issue }}
+        run: |
+          dir=.out/evidence
+          python3 judge/audit/record.py --issue "$ISSUE" --build-a "$dir/build-a/build.json" --build-b "$dir/build-b/build.json" --measurement "$dir/full-export-evidence/count.json" --checks "$dir/full-export-evidence/logs/checks.json"

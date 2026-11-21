@@ -1,25 +1,10 @@
-import League.Certificate
+import League.CertReplay
 import League.Footprint
+import GolfAuditExport
 
 /-! Reconstruct and score the certificate without importing anything from the entrant.
 The kernel checks every body against its declared type and the selected course target. -/
-open Lean Golf.Cert
-
-def decode (rename : Name → Name) (xs : Array Expr) (n : Node) : Except String Expr := do
-  let atIndex (i : Nat) : Except String Expr := match xs[i]? with
-    | some e => .ok e
-    | none => .error "invalid or forward expression reference"
-  match n with
-  | .var i => return .bvar i
-  | .sort u => return .sort u.unpack
-  | .const c us => return .const (rename c.unpack) (us.map U.unpack)
-  | .app f a => return .app (← atIndex f) (← atIndex a)
-  | .lam t b => return .lam .anonymous (← atIndex t) (← atIndex b) .default
-  | .pi t b => return .forallE .anonymous (← atIndex t) (← atIndex b) .default
-  | .letE t v b => return .letE .anonymous (← atIndex t) (← atIndex v) (← atIndex b) false
-  | .proj c i v => return .proj (rename c.unpack) i (← atIndex v)
-  | .natLit i => return .lit (.natVal i)
-  | .strLit s => return .lit (.strVal s)
+open Lean Golf.Cert Golf.CertReplay
 
 structure Seen where
   exprs : ExprSet := {}
@@ -42,31 +27,6 @@ partial def visit (env : Environment) (added : NameSet) (e : Expr) : StateM Seen
   | .letE _ t v b _ => child t; child v; child b
   | .proj _ _ a | .mdata _ a => child a
   | _ => pure ()
-
-def install (base : Environment) (cert : Certificate) (rename : Name → Name)
-    (topType : Option Expr := none) : IO (Environment × NameSet) := do
-  let mut xs := #[]
-  for node in cert.nodes do xs := xs.push (← IO.ofExcept <| decode rename xs node)
-  let mut env := base
-  let mut added : NameSet := {}
-  for row in cert.items do
-    let original := row.name.unpack
-    let n := rename original
-    if n.isAnonymous || env.contains n then throw <| IO.userError "duplicate or reserved name"
-    let some t := xs[row.type]? | throw <| IO.userError "missing type"
-    let some v := xs[row.value]? | throw <| IO.userError "missing value"
-    let t := if original == `Entry.answer then topType.getD t else t
-    let cv : ConstantVal := {name := n, levelParams := row.params.map QName.unpack, type := t}
-    let d : Declaration ← match row.kind with
-      | "theorem" => pure <| .thmDecl {cv with value := v}
-      | "definition" => pure <| .defnDecl {cv with value := v, safety := .safe, hints := .abbrev}
-      | "opaque" => pure <| .opaqueDecl {cv with value := v, isUnsafe := false}
-      | _ => throw <| IO.userError "unsupported declaration kind"
-    match env.addDeclCore 150000000 8192 d none with
-    | .error _ => throw <| IO.userError s!"kernel rejected {n}"
-    | .ok env' => env := env'
-    added := added.insert n
-  return (env, added)
 
 private def nameParts : Name → List Json → List Json
   | .anonymous, acc => acc
@@ -107,7 +67,8 @@ private partial def boundary (env : Environment) (added : NameSet) (pending : Li
       return ← boundary env added tail seen (deps.insert head)
     return ← boundary env added tail seen deps
 
-private def archiveScore (cert : Certificate) (moduleNames targetText : String) : IO Unit := do
+private def archiveScore (cert : Certificate) (moduleNames targetText : String)
+    (audit : Option Golf.Audit.Paths) : IO Unit := do
   let target ← archiveName targetText
   let modules := (moduleNames.splitOn ",").map String.toName
   let some moduleName := modules.head? | throw <| IO.userError "missing archive module"
@@ -148,12 +109,21 @@ private def archiveScore (cert : Certificate) (moduleNames targetText : String) 
   let footprint ← IO.ofExcept (Golf.Footprint.measure linked fresh root)
   let deps ← boundary linked fresh [root] {} {}
   if deps.contains target then throw <| IO.userError "replacement directly depends on its original"
+  let mut exportFields := []
+  if let some paths := audit then
+    let oldDef := if isTheorem then none else some old
+    let subject ← Golf.Audit.emit paths base linked root (target == `riemannHypothesis)
+      expected entry.levelParams oldDef
+    exportFields := [("export_subject", toJson (nameParts subject []))]
   let seen := ((do visit original added entry.type; visit original added value).run {}).2
-  IO.println (Json.mkObj [("nodes", toJson seen.exprs.size), ("helpers", toJson seen.helpers.size),
+  IO.println (Json.mkObj <| exportFields ++ [("nodes", toJson seen.exprs.size), ("helpers", toJson seen.helpers.size),
     ("axioms", toJson axioms), ("impact", footprint),
     ("archive_deps", toJson (deps.toList.map (fun n => nameParts n [])))]).compress
 
 def main (args : List String) : IO Unit := do
+  let (audit, args) : Option Golf.Audit.Paths × List String := match args with
+    | "--export" :: solution :: challenge :: rest => (some ⟨solution, challenge⟩, rest)
+    | _ => (none, args)
   let (target, file, archiveModule) ← match args with
     | [t, f] => pure (t, f, none)
     | ["archive", m, t, f] => pure (t, f, some m)
@@ -163,7 +133,7 @@ def main (args : List String) : IO Unit := do
   if data.utf8ByteSize > 8 * 1024 * 1024 then throw <| IO.userError "certificate exceeds 8 MiB"
   let cert : Certificate ← IO.ofExcept <| Json.parse data >>= fromJson?
   if cert.nodes.size > 100000 || cert.items.size > 1000 then throw <| IO.userError "certificate limit"
-  if let some m := archiveModule then return ← archiveScore cert m target
+  if let some m := archiveModule then return ← archiveScore cert m target audit
   let base ← importModules #[{module := `League.Course}] {}
   let (env, added) ← install base cert id
   let some (.thmInfo answer) := env.find? `Entry.answer | throw <| IO.userError "missing theorem Entry.answer"
@@ -194,6 +164,10 @@ def main (args : List String) : IO Unit := do
       | none => throw (IO.userError "missing reflection interface")
     else pure expected
   let (linked, privateNames) ← install base cert rename (some linkedType)
+  let mut exportFields := []
+  if let some paths := audit then
+    let subject ← Golf.Audit.emit paths base linked root (targetName == `RiemannHypothesis) linkedType []
+    exportFields := [("export_subject", toJson (nameParts subject []))]
   let footprint ← IO.ofExcept (Golf.Footprint.measure linked privateNames root)
-  IO.println (Json.mkObj [("nodes", toJson seen.exprs.size),
+  IO.println (Json.mkObj <| exportFields ++ [("nodes", toJson seen.exprs.size),
     ("helpers", toJson seen.helpers.size), ("axioms", toJson axioms), ("impact", footprint)]).compress

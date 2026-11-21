@@ -10,7 +10,7 @@ ROOTS = ("riemannHypothesis", "rhOfAll", "Formalism.VW.rh_of_every",
          "Formalism.VW.rh_of_right", "allChi")
 
 
-def catalog(folder):
+def catalog(folder, roots=ROOTS):
     # An exact trie preserves numeric and string name components and avoids storing
     # a fully qualified copy of every internal binder name in the giant export.
     children = {}
@@ -31,7 +31,7 @@ def catalog(folder):
     with gzip.open(folder / "mathlib-names.jsonl.gz", "rb") as names:
         for line in names:
             is_library[insert(json.loads(line))] = 1
-    interest = {insert(n.split(".")): n for n in ROOTS}
+    interest = {insert(n.split(".")): n for n in roots}
     targets = {}
     mapped = array("I", [0])
     owner = array("I", [UNKNOWN])
@@ -80,7 +80,7 @@ def catalog(folder):
                     expressions.append(row["value"])
                 expressions.extend(rule["rhs"] for rule in row.get("rules", []))
             array("I", [len(expressions), *expressions]).tofile(groups)
-    if set(targets) != set(ROOTS):
+    if set(targets) != set(roots):
         raise ValueError(f"Missing named theorem: {targets}")
     with (folder / "owner.bin").open("wb") as f:
         owner.tofile(f)

@@ -9,10 +9,7 @@ import tempfile
 from checks import HERE, POLICY, check, digest, environment
 
 # These primitives are checked by Lean's comparator on every input, including a small fixture.
-PRIMITIVES = """propext Classical.choice Quot.sound Quot Quot.mk Quot.lift Quot.ind
-Nat.add Nat.sub Nat.mul Nat.pow Nat.gcd Nat.div Nat.mod Nat.beq Nat.ble Nat.land Nat.lor Nat.xor
-Nat.shiftLeft Nat.shiftRight String.ofList Char.ofNat List eagerReduce Nat String String.mk Char
-optParam autoParam semiOutParam outParam""".split()
+PRIMITIVES = (HERE / "primitives.txt").read_text().split()
 THEOREM = "auditIdentity"
 
 
