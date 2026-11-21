@@ -1,0 +1,161 @@
+{
+  "archive_deps": [
+    [
+      "Formalism",
+      "BasicNotions",
+      "Rows",
+      "Data",
+      "LL"
+    ],
+    [
+      "Formalism",
+      "BasicNotions",
+      "Rows",
+      "Data",
+      "instLL"
+    ],
+    [
+      "Formalism",
+      "BasicNotions",
+      "D7"
+    ],
+    [
+      "Formalism",
+      "BasicNotions",
+      "D7",
+      "R"
+    ],
+    [
+      "Formalism",
+      "BasicNotions",
+      "D7",
+      "what\u2082"
+    ],
+    [
+      "Formalism",
+      "L2",
+      "Host",
+      "CharFrame"
+    ],
+    [
+      "Formalism",
+      "BasicNotions",
+      "D7",
+      "nfLL"
+    ],
+    [
+      "Formalism",
+      "BasicNotions",
+      "D7",
+      "nd"
+    ],
+    [
+      "Formalism",
+      "BasicNotions",
+      "D7",
+      "LL0"
+    ],
+    [
+      "Formalism",
+      "BasicNotions",
+      "D7",
+      "ntw"
+    ],
+    [
+      "Formalism",
+      "MainNotions",
+      "AbsolutelyIrreducibleSpan",
+      "q0"
+    ],
+    [
+      "GlobalTheory",
+      "LamTie",
+      "LamDat"
+    ],
+    [
+      "GlobalTheory",
+      "LamTie",
+      "LamDat",
+      "q0"
+    ],
+    [
+      "GlobalTheory",
+      "LamTie",
+      "LamDat",
+      "Ok"
+    ],
+    [
+      "GlobalTheory",
+      "LamTie",
+      "LamDat",
+      "Teich"
+    ],
+    [
+      "GlobalTheory",
+      "LamTie",
+      "LamDat",
+      "C"
+    ],
+    [
+      "GlobalTheory",
+      "LamTie",
+      "IsLamTieFull"
+    ],
+    [
+      "GlobalTheory",
+      "HeightCounting",
+      "SideCopy",
+      "CopyAll"
+    ],
+    [
+      "GlobalTheory",
+      "HeightCounting",
+      "SideCopy",
+      "SameFrame"
+    ],
+    [
+      "_private",
+      "Development",
+      "AutomorphicArithmetic",
+      "ThetaCorrespondence",
+      "ThetaPairLifts",
+      "ThirdPlaceSeries",
+      "SideEigenformCopyTransfer",
+      0,
+      "GlobalTheory",
+      "HeightCounting",
+      "SideCopy",
+      "Restage",
+      "lambda_datum_transfer"
+    ]
+  ],
+  "attempt": 1,
+  "author": "nikete",
+  "axioms": [
+    "Classical.choice",
+    "Quot.sound",
+    "propext"
+  ],
+  "axioms_scope": "pinned-export-upper-bound",
+  "certificate_sha256": "e5684d39ffeae5662a6d736b5865ab752d05b8d8cc0a3042badb5feb5f3d98dd",
+  "commit": "f913b325a41554d99b03f544b4a31c602489f8de",
+  "helpers": 0,
+  "hole": "GlobalTheory.HeightCounting.SideCopy.LamCopy.lam_copy",
+  "impact": {
+    "private_nodes": 260,
+    "shared": {},
+    "version": 1
+  },
+  "issue": 9,
+  "nodes": 260,
+  "reuse_donor": "_private.Development.AutomorphicArithmetic.ThetaCorrespondence.ThetaPairLifts.ThirdPlaceSeries.SideEigenformCopyTransfer.0.GlobalTheory.HeightCounting.SideCopy.Restage.lambda_datum_transfer",
+  "reuse_statement_id": 533990774,
+  "reuse_universe_parameters": [],
+  "run": 44917008968,
+  "season": "1",
+  "source_sha256": "e4d6e53d944e1bb20c325f70ba88ee82771e27c188aa2007c829e03785d60fdb",
+  "standalone_rh_nodes": 2496688374,
+  "status": "accepted",
+  "submitted": "2026-11-21T15:02:08Z",
+  "verifier": "pinned-export-exact-reuse-v1"
+}

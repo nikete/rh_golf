@@ -1,0 +1,1 @@
+reuse _private.Development.AutomorphicArithmetic.ThetaCorrespondence.ThetaPairLifts.ThirdPlaceSeries.SideEigenformCopyTransfer.0.GlobalTheory.HeightCounting.SideCopy.Restage.lambda_datum_transfer
