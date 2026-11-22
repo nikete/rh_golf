@@ -1,0 +1,91 @@
+{
+  "portfolio_sha256": "520dcf8e1a1165502e32d0976ad6872545f9bf4116266efcadd8d6ded5a5f82d",
+  "certified_nodes": 2369269797,
+  "projected_nodes": 2369063650,
+  "replacements": {
+    "GlobalTheory.AddLaw.diagX_self": {
+      "impact": {
+        "private_nodes": 1458,
+        "shared": {},
+        "version": 1
+      },
+      "archive_deps": [
+        "GlobalTheory.AddLaw.diagX._proof_1",
+        "GlobalTheory.AddLaw.diagX"
+      ],
+      "source_sha256": "6170e494992f91fbf2a56bb01a1dfe8109ce7a662a05f843a7bbd940fc641e49"
+    },
+    "GlobalTheory.AddLaw.diagX_smul": {
+      "impact": {
+        "private_nodes": 4827,
+        "shared": {},
+        "version": 1
+      },
+      "archive_deps": [
+        "GlobalTheory.AddLaw.diagX._proof_3",
+        "GlobalTheory.AddLaw.diagX._proof_1",
+        "GlobalTheory.AddLaw.diagX._proof_5",
+        "GlobalTheory.AddLaw.diagX._proof_4",
+        "GlobalTheory.AddLaw.diagX",
+        "GlobalTheory.AddLaw.diagX._proof_2"
+      ],
+      "source_sha256": "300b5c0b943e70bacc6b643130147459a033ea1a7a94c4f3877ad0877c7ac457"
+    },
+    "GlobalTheory.AddLaw.diagZ_self": {
+      "impact": {
+        "private_nodes": 924,
+        "shared": {},
+        "version": 1
+      },
+      "archive_deps": [
+        "GlobalTheory.AddLaw.diagX._proof_1",
+        "GlobalTheory.AddLaw.diagZ"
+      ],
+      "source_sha256": "6056cb0b7432ddd753db437826d4412295a4e18a755b592f53083bf452d9f823"
+    },
+    "GlobalTheory.AddLaw.diagZ_smul": {
+      "impact": {
+        "private_nodes": 3888,
+        "shared": {},
+        "version": 1
+      },
+      "archive_deps": [
+        "GlobalTheory.AddLaw.diagX._proof_3",
+        "GlobalTheory.AddLaw.diagX._proof_1",
+        "GlobalTheory.AddLaw.diagZ",
+        "GlobalTheory.AddLaw.diagX._proof_2"
+      ],
+      "source_sha256": "7d1f8a9c1a65cb2bff16332d4fd375a9d1e459738d4aedf0e9c7b09e5d4ad65f"
+    },
+    "GlobalTheory.AddLaw.negDiagY_self": {
+      "impact": {
+        "private_nodes": 1803,
+        "shared": {},
+        "version": 1
+      },
+      "archive_deps": [
+        "GlobalTheory.AddLaw.diagX._proof_1",
+        "GlobalTheory.AddLaw.negDiagY"
+      ],
+      "source_sha256": "1c51672aa14f255315b4f5ace7db1629c2eb7085376884e4d2cf3d46663d97ab"
+    },
+    "GlobalTheory.AddLaw.negDiagY_smul": {
+      "impact": {
+        "private_nodes": 6398,
+        "shared": {},
+        "version": 1
+      },
+      "archive_deps": [
+        "GlobalTheory.AddLaw.diagX._proof_3",
+        "GlobalTheory.AddLaw.negDiagY._proof_1",
+        "GlobalTheory.AddLaw.diagX._proof_1",
+        "GlobalTheory.AddLaw.diagX._proof_5",
+        "GlobalTheory.AddLaw.negDiagY",
+        "GlobalTheory.AddLaw.diagX._proof_4",
+        "GlobalTheory.AddLaw.negDiagY._proof_2",
+        "GlobalTheory.AddLaw.diagX._proof_2"
+      ],
+      "source_sha256": "a5d35906682e7860f4b5b3aefe8b86eecada78ea7f0db194109ff80626e1b236"
+    }
+  }
+}
