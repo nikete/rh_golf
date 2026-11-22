@@ -12,7 +12,7 @@ import re
 import shutil
 from urllib.parse import urlencode
 
-from run import CONFIG, TARGETS, SEASON, ROOT, LOGIN, validate_score, event_submission, valid_target, open_graph
+from run import CONFIG, TARGETS, SEASON, ROOT, LOGIN, SOURCE_URL, import_origin, validate_score, event_submission, valid_target, open_graph
 
 REPO_RE = re.compile(r"[a-zA-Z0-9-]+/[a-zA-Z0-9._-]+\Z")
 HEX = re.compile(r"[0-9a-f]{64}\Z")
@@ -43,11 +43,16 @@ def record_order(row):
     return size is None, size or 0, row["issue"]
 
 
+def player_key(row):
+    name = row["author"]
+    return name if name.startswith("https://") else name.lower()
+
+
 def chosen(rows):
     """One personal best per hole. Earlier issue breaks a personal tie without changing points."""
     best = {}
     for row in rows:
-        key = (row["author"].lower(), target_key(row["hole"]))
+        key = (player_key(row), target_key(row["hole"]))
         if key not in best or record_order(row) < record_order(best[key]):
             best[key] = row
     return list(best.values())
@@ -61,11 +66,11 @@ def rank_targets(rows, refs, credits):
     pars = {hole: size for hole, r in refs.items() if (size := record_size(r)) is not None}
     hole_credits = defaultdict(int)
     for row in rows:
-        hole_credits[row["author"].lower(), target_key(row["hole"])] += credits.get(row["issue"], 0)
+        hole_credits[player_key(row), target_key(row["hole"])] += credits.get(row["issue"], 0)
     players = {}
     holes = defaultdict(list)
     for r in sorted(chosen(rows), key=record_order):
-        hole, who = target_key(r["hole"]), r["author"].lower()
+        hole, who = target_key(r["hole"]), player_key(r)
         size = record_size(r)
         if size is not None:
             pars[hole] = min(pars.get(hole, size), size)
@@ -97,18 +102,18 @@ def standings(rows, refs, baseline, graph=None, *, audit_dir=None):
                 row = by_issue[issue]
                 evidence = {k: event[k] for k in ("verification_kind", "evidence_url")}
                 award = {**evidence, "issue": issue, "points": amount}
-                player_evidence[row["author"].lower()].append(award)
-                personal_evidence[row["author"].lower(), target_key(row["hole"])].append(award)
+                player_evidence[player_key(row)].append(award)
+                personal_evidence[player_key(row), target_key(row["hole"])].append(award)
     certified = [dict(r, verification=covered[r["issue"]]) for r in rows if r["issue"] in covered]
     _, _, leaders = rank_targets(certified, {}, credits)
     for player in leaders:
-        player["points_evidence"] = player_evidence[player["author"].lower()]
+        player["points_evidence"] = player_evidence[player_key(player)]
     singletons = {a["entries"][0] for a in project["audits"] if len(a["entries"]) == 1 and not a["course_reflection"]}
     roots = [r for r in certified if r["issue"] in singletons and target_key(r["hole"]) == "riemann"]
     _, root_bests, _ = rank_targets(roots, {}, credits)
     for hole, bests in root_bests.items():
         for r in bests:
-            r["points_evidence"] = personal_evidence[r["author"].lower(), hole]
+            r["points_evidence"] = personal_evidence[player_key(r), hole]
             r["points"] = sum(a["points"] for a in r["points_evidence"])
     return {"riemann": project["current_nodes"]}, root_bests, leaders, project, credits
 
@@ -148,6 +153,9 @@ def record(event, receipt, folder):
     row = {**stamp, "author": who, "issue": event["issue"]["number"],
            "run": int(os.environ["GITHUB_RUN_ID"]), "attempt": int(os.environ["GITHUB_RUN_ATTEMPT"]),
            "commit": os.environ["GITHUB_SHA"], "submitted": event["issue"]["created_at"]}
+    origin, _ = import_origin(event)
+    if origin:
+        row["source_url"] = origin
     validate_row(row)
     dest = folder / SEASON / str(row["issue"])
     dest.mkdir(parents=True, exist_ok=True)
@@ -184,6 +192,8 @@ def elem_table(cols, rows, empty):
 
 
 def player(r):
+    if r["author"].startswith("https://"):
+        return link(r["author"], r["author"])
     name = esc(r["author"])
     return f"<a href='https://github.com/{name}'>@{name}</a>"
 
@@ -226,6 +236,10 @@ def read_ledger_row(file, backfills):
     validate_row(row)
     if str(row["issue"]) != file.parent.name:
         raise ValueError("Ledger directory and issue number differ")
+    if "source_url" in row:
+        if not SOURCE_URL.fullmatch(row["source_url"]):
+            raise ValueError("Invalid external finding URL")
+        row = dict(row, submitted_by=row["author"], author=row["source_url"])
     return row
 
 
@@ -379,10 +393,10 @@ def render(ledger, output):
       Players have contributed {fmt(project['community_saved_nodes'])} more.</p>
       <p>The best provisional measurement is <strong>{fmt(measured['current_nodes'])} nodes</strong>.
       Exact theorem substitutions can earn points through a transformation certificate. Custom and mixed proofs earn points after full-export verification.</p></section>"""
-    accounts = {r["issue"]: r["author"] for r in rows}
+    accounts = {r["issue"]: (r["author"] if r["author"].startswith("https://") else "@" + r["author"]) for r in rows}
     changes = []
     for h in reversed(project["history"]):
-        credit_links = [link(f"{GITHUB}/issues/{i}", f"@{accounts[i]} · {fmt(amount)}")
+        credit_links = [link(f"{GITHUB}/issues/{i}", f"{accounts[i]} · {fmt(amount)}")
                         for i, amount in h["credits"].items()]
         changes.append([link(f"{GITHUB}/issues/{h['issue']}", f"#{h['issue']}"),
                         esc(target_names[h["issue"]]), fmt(h["before_nodes"]), fmt(h["after_nodes"]), ", ".join(credit_links),
@@ -399,7 +413,7 @@ def render(ledger, output):
         winners = first["entries"] if first else ()
         evidence = {k: first[k] for k in ("verification_kind", "evidence_url")} if first else {}
         project["bounties"].append(dict(name=name, required_saved_nodes=required, winning_issues=winners, **evidence))
-        status = ", ".join(link(f"{GITHUB}/issues/{i}", "@" + accounts[i]) for i in winners)
+        status = ", ".join(link(f"{GITHUB}/issues/{i}", accounts[i]) for i in winners)
         bounty_rows.append([link(f"{GITHUB}/issues/{issue}", name), percent, fmt(required),
                             status or f"{fmt(project['current_nodes'] - limit)} nodes to go"])
     bounties = "<section id='bounties'><h2>Open proof bounties</h2><p>Earn a title for the first certified complete proof to cross each threshold. Winning partners share the title. All awards are recognition only.</p>" + elem_table(

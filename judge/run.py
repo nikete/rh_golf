@@ -41,8 +41,23 @@ def validate_source(text):
     return text.rstrip() + "\n"
 
 
+SOURCE_URL = re.compile(r"https://[A-Za-z0-9.-]+/[A-Za-z0-9._~!$&()*+,=:@%/?#-]{1,1900}\Z")
+
+
+def import_origin(event):
+    issue = event["issue"]
+    body = (issue.get("body") or "").replace("\r\n", "\n").strip()
+    first, _, rest = body.partition("\n")
+    if first.startswith("Imported from "):
+        url = first.removeprefix("Imported from ")
+        if issue.get("author_association") != "OWNER" or not SOURCE_URL.fullmatch(url):
+            raise Rejected("External credit requires a repository owner and an HTTPS finding URL.")
+        return url, rest.lstrip()
+    return None, body
+
+
 def issue_blocks(event):
-    body = (event["issue"].get("body") or "").replace("\r\n", "\n").strip()
+    _, body = import_origin(event)
     parts = re.split(r"(?<=\n```)[ \t]*\n(?:[ \t]*\n)*[ \t]*```rh-proof[ \t]*\n", body)
     if len(parts) == 1:
         return body, None

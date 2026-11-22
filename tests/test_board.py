@@ -86,6 +86,11 @@ class BoardTests(unittest.TestCase):
             # Aggregation fixture only. Mathematical acceptance is covered by the CI kernel tests.
             event = {"issue": {"number": 19, "created_at": "2026-11-21", "title": "[entry] reflection",
                                "body": "```lean\n" + source + "```", "user": {"login": "player"}}}
+            url = "https://upstream.example/result/ABC"
+            event["issue"]["body"] = "Imported from " + url + "\n\n" + event["issue"]["body"]
+            with self.assertRaises(Rejected):
+                event_submission(event)
+            event["issue"]["author_association"] = "OWNER"
             r = dict(status="accepted", hole="reflection", season="1", nodes=280, helpers=0,
                      axioms=[], source_sha256=hashlib.sha256(source.encode()).hexdigest(), certificate_sha256="a"*64)
             receipt = p / "receipt"; receipt.write_text(json.dumps(r))
@@ -99,7 +104,9 @@ class BoardTests(unittest.TestCase):
                 self.assertEqual(data["accepted"][0]["points"], 0)
                 self.assertEqual(data["project"]["pending_issues"], [19])
                 self.assertEqual((p/"site/proofs/19.lean").read_text(), source)
-                self.assertIn("player", (p/"site/index.html").read_text())
+                self.assertEqual(data["accepted"][0]["author"], url)
+                self.assertEqual(data["accepted"][0]["submitted_by"], "player")
+                self.assertIn(f"href='{url}'", (p/"site/index.html").read_text())
                 self.assertIn("CI receipt", (p/"site/reflection.html").read_text())
                 r["source_sha256"] = "f"*64; receipt.write_text(json.dumps(r))
                 with self.assertRaises(ValueError):
