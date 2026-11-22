@@ -21,6 +21,14 @@ Survey started 22 November 2026. This directory follows public work on shortenin
 | [MIT verification](https://math.mit.edu/~drew/grh/), [community comparator](https://github.com/leanprover-community/riemann-hypothesis), [independent replay](https://github.com/rohanarun/alpoge-rh-replay) | Baseline evidence and replay infrastructure. |
 | [Lean Explorer](https://github.com/rithn/riemann-lean-reader), [tamnd source mirror](https://github.com/tamnd/riemann-lean) | Navigation, provenance and discovery of new forks. |
 
+## Entries sent to RH Golf
+
+| Source change | Ordinary-RH target | Entry and evidence |
+|---|---|---|
+| [Covariance formula reuse](https://github.com/leanprover-community/riemann-hypothesis/pull/92/commits/bb1ffc43837cba8e5fad630e6688d45dd818a3ea) | GlobalTheory.CovNFormulaPf.main | [#19, portable witness](https://github.com/nikete/rh_golf/issues/19). Local standalone count 2,500,874,748 nodes. |
+| [Reflection proof](https://github.com/leanprover-community/riemann-hypothesis/pull/95/commits/018e327c93d07383f5542b97741ca17548db2a7e) | Formalism.VW.rh_of_right | [#20, judge verdict thread](https://github.com/nikete/rh_golf/issues/20) |
+| [Bohrium Core 1 zero-free region port](https://github.com/leanprover-community/riemann-hypothesis/pull/83/commits/92e1668af9185779557a28ce4983f28e5d12b41f) | Formalism.ZF.zeroFreeRegion | [#21, judge verdict thread](https://github.com/nikete/rh_golf/issues/21) |
+
 ## Upstream changes to examine
 
 - [#4](https://github.com/leanprover-community/riemann-hypothesis/pull/4) chore: minimize imports
