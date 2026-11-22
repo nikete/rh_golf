@@ -1,0 +1,30 @@
+{
+  "attempt": 1,
+  "author": "nikete",
+  "axioms": [
+    "Classical.choice",
+    "Quot.sound",
+    "propext"
+  ],
+  "axioms_scope": "pinned-export-upper-bound",
+  "certificate_sha256": "3bbd406abc40266eb5e44ac499c6c4ce7524428d034fe2ee653daa2b8ae6c0ff",
+  "commit": "c8e548a2da0d8ae62c9025645b29ecc01a00f075",
+  "helpers": 0,
+  "hole": "riemannHypothesis",
+  "issue": 18,
+  "nodes": 22083743,
+  "portfolio_coverage": {
+    "bypassed": 0,
+    "reachable": 201260,
+    "submitted": 201260
+  },
+  "portfolio_sha256": "520dcf8e1a1165502e32d0976ad6872545f9bf4116266efcadd8d6ded5a5f82d",
+  "portfolio_url": "https://raw.githubusercontent.com/nikete/rh_golf/e40e3248dbce95e4b2a746f722293dee1de3b7df/candidates/optimized-2369269797.jsonl.gz",
+  "run": 45007866153,
+  "season": "1",
+  "source_sha256": "40abdbdab8ddad6ea84c0dc67f948ea10d8c1da3365b8b40e1ccac642096f689",
+  "standalone_rh_nodes": 2369269797,
+  "status": "accepted",
+  "submitted": "2026-11-22T09:30:22Z",
+  "verifier": "pinned-export-exact-reuse-portfolio-v1"
+}
