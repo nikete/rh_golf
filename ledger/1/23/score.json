@@ -1,0 +1,81 @@
+{
+  "archive_deps": [
+    [
+      "Formalism",
+      "ZF",
+      "ThreeFourOne",
+      "_proof_2"
+    ],
+    [
+      "Formalism",
+      "ZF",
+      "ThreeFourOne"
+    ],
+    [
+      "Formalism",
+      "ZeroFreeDirichlet",
+      "negLogDerivPositivity"
+    ],
+    [
+      "Formalism",
+      "ZeroFreeDirichlet",
+      "negLD"
+    ],
+    [
+      "Formalism",
+      "ZeroFreeDirichlet",
+      "LandauLocal2",
+      "_proof_2"
+    ],
+    [
+      "Formalism",
+      "ZeroFreeDirichlet",
+      "Positivity",
+      "_proof_1"
+    ],
+    [
+      "Formalism",
+      "ZeroFreeDirichlet",
+      "LandauLocal2",
+      "_proof_1"
+    ],
+    [
+      "Formalism",
+      "ZF",
+      "LogDerivBound",
+      "_proof_1"
+    ],
+    [
+      "Formalism",
+      "ZF",
+      "ThreeFourOne",
+      "_proof_1"
+    ]
+  ],
+  "archive_module": "Formalism.ZeroFreeRegion.ZetaLogDerivativeBounds.ThreeFourOne,Formalism.LandauZeroFreeBounds.ExceptionalZeroBounds.Positivity",
+  "attempt": 1,
+  "author": "nikete",
+  "axioms": [
+    "propext",
+    "Classical.choice",
+    "Quot.sound"
+  ],
+  "certificate_sha256": "d55546ac08cee24f88c1aa4e71b1208770fee3c564bcdfb35fce6e1eda12bad5",
+  "commit": "ce26d733edb6fb4f7130027e7e2c8c0c34de4900",
+  "helpers": 0,
+  "hole": "Formalism.ZF.mertensInequality",
+  "impact": {
+    "private_nodes": 894,
+    "shared": {},
+    "version": 1
+  },
+  "issue": 23,
+  "nodes": 894,
+  "run": 45032837653,
+  "season": "1",
+  "source_sha256": "5b059d08c88578ed24d1d984a812375d817d7737d5c328c248c4efddd166d693",
+  "source_url": "https://github.com/YinkaiYu/riemann-hypothesis/blob/4938a86c3e68095277b498f3b92e2bd4d2fda3ec/src/Formalism/ZeroFreeRegion/ZetaLogDerivativeBounds/ThreeFourOne.lean#L9",
+  "standalone_rh_nodes": 2502220693,
+  "status": "accepted",
+  "submitted": "2026-11-22T14:26:32Z"
+}
