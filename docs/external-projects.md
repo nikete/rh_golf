@@ -41,7 +41,7 @@ Survey started 22 November 2026. This directory follows public work on shortenin
 ### Deferred findings and overlaps
 
 - [Pi’s Bohrium attempt 97307](https://lean.claude-en.com/api/attempt/97307) reports 2,031 Core 1 tokens. Its public diff is marked truncated and shows only 117 added lines of the 221-line solution. Awaiting complete source for this distinct attempt.
-- PR 68 uses a different donor from [#11](https://github.com/nikete/rh_golf/issues/11). Both previously submitted portfolios send the two theorems to a common third donor. The PR is measured standalone under its own attribution.
+- [PR 68's imported substitution (#29)](https://github.com/nikete/rh_golf/issues/29#issuecomment-7080585733) saved 2,041,028 nodes on the archive. We also replaced the corresponding substitution in [record #18](https://github.com/nikete/rh_golf/issues/18#issuecomment-7077199636) and ran the pinned delta checker. Both proofs measured 2,369,269,797 nodes, a local combined gain of zero. Both theorems in #18 already use the same third proof.
 - PRs 54 and 87 each contain additional edits. The rows above cover individual declarations only. The 31-module principal-character route and the conditional Principia reduction remain catalogued above.
 
 ## Upstream changes to examine
@@ -79,6 +79,20 @@ Survey started 22 November 2026. This directory follows public work on shortenin
 - [#94](https://github.com/leanprover-community/riemann-hypothesis/pull/94) Reuse the quadratic Hasse norm theorem for the negative-one norm equation
 - [#95](https://github.com/leanprover-community/riemann-hypothesis/pull/95) Simplify proofs in GammaFactorNonvanishing and ZeroFreeRegion (−824 lines)
 - [#98](https://github.com/leanprover-community/riemann-hypothesis/pull/98) Minimize and privatize imports (stacked on #79)
+
+## Measuring a finding against the record
+
+For each finding, record its standalone verdict and test what it saves when added to the current certified ordinary-RH proof. A zero-point verdict alone leaves that second question open. Link the incumbent issue, the exact candidate revision and the combined verdict. Mark a local measurement as local until the issue judge certifies the combined entry.
+
+For an exact-reuse record, download the base manifest pinned in its issue. Run the following from the repository root with the archive graph installed. Use a new output path. For a candidate portfolio, replace `--target TARGET --donor DONOR` with `--manifest candidate.jsonl.gz`.
+
+```sh
+python3 judge/compare_reuse.py --graph .out/archive-graph \
+  --base incumbent.jsonl.gz --base-sha256 BASE_DIGEST \
+  --target TARGET --donor DONOR --output combined.jsonl.gz
+```
+
+The checker measures the base, replaces each candidate target's donor while retaining the other substitutions, checks the joint proof, and reports the difference. A positive result is ready for witness generation and submission under the finding's URL. If the joint proof is rejected, record the checker reason. If the incumbent or candidate needs an unsupported proof format, mark the combination unmeasured. Recheck against the latest certified record before filing an improvement.
 
 ## Entering an external result
 
