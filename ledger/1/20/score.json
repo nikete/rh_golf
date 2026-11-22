@@ -1,0 +1,28 @@
+{
+  "attempt": 1,
+  "author": "nikete",
+  "axioms": [
+    "propext",
+    "Classical.choice",
+    "Quot.sound"
+  ],
+  "certificate_sha256": "b1a0803ec7affc3ad28cc2eea23db3fc5afbd0cdb6af7aa88fb1f03a32a8d939",
+  "commit": "a4f5205a00f0acc1176e8db8b4d92ef57356c054",
+  "helpers": 0,
+  "hole": "Formalism.VW.rh_of_right",
+  "impact": {
+    "private_nodes": 2839,
+    "shared": {
+      "Golf.Reflection._proof_1": 30
+    },
+    "version": 1
+  },
+  "issue": 20,
+  "nodes": 2831,
+  "run": 45030277265,
+  "season": "1",
+  "source_sha256": "0eabe0bf7c0342ef006cf63cb5416f4977c2c1592c7103000c8b587fc37d165f",
+  "source_url": "https://github.com/leanprover-community/riemann-hypothesis/pull/95/commits/018e327c93d07383f5542b97741ca17548db2a7e",
+  "status": "accepted",
+  "submitted": "2026-11-22T13:58:34Z"
+}
