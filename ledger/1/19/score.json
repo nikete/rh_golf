@@ -1,0 +1,48 @@
+{
+  "archive_deps": [
+    [
+      "Formalism",
+      "L2",
+      "SG",
+      "Pf",
+      "LoopBCovN",
+      "CovNFormula"
+    ],
+    [
+      "Formalism",
+      "MainStatements",
+      "RowRest",
+      "covariance_formula"
+    ]
+  ],
+  "attempt": 1,
+  "author": "nikete",
+  "axioms": [
+    "Classical.choice",
+    "Quot.sound",
+    "propext"
+  ],
+  "axioms_scope": "pinned-export-upper-bound",
+  "certificate_sha256": "e967fcf45d0d481d83ca6033612a1f482d2d2c54ec18180a9101afbc2b7a57ec",
+  "commit": "a4f5205a00f0acc1176e8db8b4d92ef57356c054",
+  "helpers": 0,
+  "hole": "GlobalTheory.CovNFormulaPf.main",
+  "impact": {
+    "private_nodes": 2,
+    "shared": {},
+    "version": 1
+  },
+  "issue": 19,
+  "nodes": 2,
+  "reuse_donor": "Formalism.MainStatements.RowRest.covariance_formula",
+  "reuse_statement_id": 434467756,
+  "reuse_universe_parameters": [],
+  "run": 45030276491,
+  "season": "1",
+  "source_sha256": "d992adc7b2540058828ff6dc5c8673f57d67bdab848f6b9543df17e72406b7de",
+  "source_url": "https://github.com/leanprover-community/riemann-hypothesis/pull/92/commits/bb1ffc43837cba8e5fad630e6688d45dd818a3ea",
+  "standalone_rh_nodes": 2500874748,
+  "status": "accepted",
+  "submitted": "2026-11-22T13:58:33Z",
+  "verifier": "pinned-export-exact-reuse-v1"
+}
