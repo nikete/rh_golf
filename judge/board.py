@@ -401,23 +401,7 @@ def render(ledger, output):
         changes.append([link(f"{GITHUB}/issues/{h['issue']}", f"#{h['issue']}"),
                         esc(target_names[h["issue"]]), fmt(h["before_nodes"]), fmt(h["after_nodes"]), ", ".join(credit_links),
                         link(h["evidence_url"], VERIFICATION_LABELS[h["verification_kind"]])])
-    bounty_rows = []
     project["bounties"] = []
-    for issue, name, denominator, percent in (
-            (3, "The Critical Cut", 1000, "0.1%"),
-            (4, "The Riemann Razor", 100, "1%"),
-            (5, "The Great Zeta Vanishing", 10, "10%")):
-        required = (project["archive_nodes"] + denominator - 1) // denominator
-        limit = project["archive_nodes"] - required
-        first = next((event for event in project["history"] if event["after_nodes"] <= limit), None)
-        winners = first["entries"] if first else ()
-        evidence = {k: first[k] for k in ("verification_kind", "evidence_url")} if first else {}
-        project["bounties"].append(dict(name=name, required_saved_nodes=required, winning_issues=winners, **evidence))
-        status = ", ".join(link(f"{GITHUB}/issues/{i}", accounts[i]) for i in winners)
-        bounty_rows.append([link(f"{GITHUB}/issues/{issue}", name), percent, fmt(required),
-                            status or f"{fmt(project['current_nodes'] - limit)} nodes to go"])
-    bounties = "<section id='bounties'><h2>Open proof bounties</h2><p>Earn a title for the first certified complete proof to cross each threshold. Winning partners share the title. All awards are recognition only.</p>" + elem_table(
-        ["Title", "Cut", "Total nodes saved to qualify", "Progress"], bounty_rows, "") + "</section>"
     history_table = ""
     if changes:
         history_table = "<h3>Record improvements</h3>" + elem_table(
@@ -450,7 +434,7 @@ def render(ledger, output):
       <details id='agent-details'><summary>Read the prompt</summary><pre id='agent-prompt' tabindex='0'>{esc(prompt)}</pre></details>
       <span id='copy-status' role='status'></span><script src='copy-prompt.js' defer></script>
     </section>
-    {total_panel}{bounties}<section id='course' class='submit-target'><div class='sectionhead'><h2>Choose a declaration</h2>
+    {total_panel}<section id='course' class='submit-target'><div class='sectionhead'><h2>Choose a declaration</h2>
     <div>{link(archive_url, 'Browse the archive ↗')} · {link(graph_url, 'Declaration names and node costs ↗')}</div></div>
     <p>Use the declaration’s full Lean name in a new issue title. For example, to replace the reflection step, use</p>
     <pre>[entry] Formalism.VW.rh_of_right</pre>
