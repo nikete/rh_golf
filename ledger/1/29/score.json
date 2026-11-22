@@ -1,0 +1,45 @@
+{
+  "archive_deps": [
+    [
+      "GlobalTheory",
+      "Published",
+      "AutomorphicFormsFiniteGL"
+    ],
+    [
+      "UpperTheory",
+      "V",
+      "Af",
+      "formsFiniteGL"
+    ]
+  ],
+  "attempt": 1,
+  "author": "nikete",
+  "axioms": [
+    "Classical.choice",
+    "Quot.sound",
+    "propext"
+  ],
+  "axioms_scope": "pinned-export-upper-bound",
+  "certificate_sha256": "19779d3ded2331043385e2ffd3feb05391c73a9c06d9f8fea66be7aa62fd3582",
+  "commit": "ce26d733edb6fb4f7130027e7e2c8c0c34de4900",
+  "helpers": 0,
+  "hole": "GlobalTheory.automorphicFormsFiniteGL",
+  "impact": {
+    "private_nodes": 2,
+    "shared": {},
+    "version": 1
+  },
+  "issue": 29,
+  "nodes": 2,
+  "reuse_donor": "UpperTheory.V.Af.formsFiniteGL",
+  "reuse_statement_id": 16544059,
+  "reuse_universe_parameters": [],
+  "run": 45033057488,
+  "season": "1",
+  "source_sha256": "32557b579fa5098724ab367086b5e1bc4f73d4c5f52dfbec43ef97a014057237",
+  "source_url": "https://github.com/leanprover-community/riemann-hypothesis/pull/68/commits/37e3cd06d3bc65c74b9496adfea9f9827e727fbf",
+  "standalone_rh_nodes": 2500186240,
+  "status": "accepted",
+  "submitted": "2026-11-22T14:29:08Z",
+  "verifier": "pinned-export-exact-reuse-v1"
+}
