@@ -1,0 +1,61 @@
+{
+  "archive_deps": [
+    [
+      "UpperTheory",
+      "Reformulated",
+      "B",
+      "NormIndexQuadratic",
+      "cv"
+    ],
+    [
+      "GlobalTheory",
+      "QNorm",
+      "hasseNormSt"
+    ],
+    [
+      "UpperTheory",
+      "Reformulated",
+      "B",
+      "NormIndexQuadratic",
+      "Kv"
+    ],
+    [
+      "UpperTheory",
+      "Reformulated",
+      "B",
+      "NormIndexQuadratic",
+      "Pl"
+    ],
+    [
+      "GlobalTheory",
+      "LocalQuad",
+      "exists_ringHom_adicCompletion"
+    ]
+  ],
+  "archive_module": "Development.AutomorphicArithmetic.IntegralCasts.CapelliIdentities.NormIndexQuadratic,Development.AbelianVarietyTheory.Proofs.AdelicLatticeProofs.HasseNormTheoremQuadraticExtension,Development.AbelianVarietyTheory.Proofs.AdelicLatticeProofs.ExistsRingHomAdicCompletion",
+  "attempt": 1,
+  "author": "nikete",
+  "axioms": [
+    "propext",
+    "Classical.choice",
+    "Quot.sound"
+  ],
+  "certificate_sha256": "ba481f3fda85f8d59ba48b6b9c39bcb2f45dbf9e9d457b9e8daf2e8399c9ba1a",
+  "commit": "ce26d733edb6fb4f7130027e7e2c8c0c34de4900",
+  "helpers": 1,
+  "hole": "UpperTheory.Reformulated.B.NormIndexQuadratic.glob_neg_one",
+  "impact": {
+    "private_nodes": 20663,
+    "shared": {},
+    "version": 1
+  },
+  "issue": 25,
+  "nodes": 20318,
+  "run": 45032839014,
+  "season": "1",
+  "source_sha256": "200f0c4eaa43c95b10d87eea95806402d2178a80ed5697408f4baea116f1c02d",
+  "source_url": "https://github.com/hhh2210/riemann-hypothesis/blob/ae11f0f2b01356117a3acb5a4fb888c322bc7b8e/src/Development/AutomorphicArithmetic/IntegralCasts/CapelliIdentities/NormIndexQuadratic.lean#L39",
+  "standalone_rh_nodes": 2501897830,
+  "status": "accepted",
+  "submitted": "2026-11-22T14:26:34Z"
+}
