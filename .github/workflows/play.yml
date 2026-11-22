@@ -88,6 +88,11 @@ jobs:
                   summary = (f"**Entrant-generated proof verified.** Target `{r['hole']}`. "
                              f"Certified complete RH size: **{r['standalone_rh_nodes']:,} nodes**. "
                              f"Points in this snapshot: **{entry['points']:,}**.")
+              if "standalone_rh_nodes" in r and entry["points"] == 0:
+                  summary += (" Zero snapshot points can coexist with a gain when combined with the record. "
+                              "See [how to measure the combined proof]"
+                              "(https://github.com/nikete/rh_golf/blob/main/docs/external-projects.md"
+                              "#measuring-a-finding-against-the-record).")
               warning = project.get("bundle_warnings", {}).get(str(issue))
               if warning:
                   summary += f" Optional combination skipped in this snapshot: {warning}."
