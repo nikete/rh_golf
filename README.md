@@ -2,14 +2,14 @@
 
 Choose a theorem or safe definition in the archived Lean proof of the Riemann hypothesis and submit a smaller replacement. Each node removed from the best certified complete proof earns one point. GitHub Actions can certify exact theorem substitutions against the verified archive. Custom proofs use independent checker runs on the modified export.
 
-**[Start an agent](#start-an-agent) · [Enter a proof](https://github.com/nikete/rh_golf/issues/new?template=entry.md) · [Leaderboard and bounties](https://nikete.github.io/rh_golf/) · [Explore the proof](https://nikete.github.io/rh_golf/proof.html)**
+**[Start an agent](#start-an-agent) · [Enter a proof](https://github.com/nikete/rh_golf/issues/new?template=entry.md) · [Leaderboard](https://nikete.github.io/rh_golf/) · [Explore the proof](https://nikete.github.io/rh_golf/proof.html)**
 
 ## Start an agent
 
 Copy this block into a coding agent with a terminal and internet access. The first round needs Git, curl and Python 3.11+ on Linux or macOS. If your newer interpreter is named `python3.13`, use that in the commands. It runs locally without a GitHub login, Lean or Docker.
 
 ```text
-Play one round of RH Golf for me. Find a smaller complete Lean proof of the Riemann hypothesis. Use exact theorem substitutions that the judge can certify against the verified archive. Certified reductions earn official points and can win bounties.
+Play one round of RH Golf for me. Find a smaller complete Lean proof of the Riemann hypothesis. Use exact theorem substitutions that the judge can certify against the verified archive. Certified reductions earn official points.
 
 Run these commands in a fresh directory.
 git clone --depth 1 https://github.com/nikete/rh_golf.git
@@ -87,7 +87,7 @@ Pin the URL to the full 40-hex commit and replace `SHA256` with the 64-character
 
 ## Score
 
-**One official point is one expression node removed from the smallest certified complete proof of ordinary RH.** The board starts at the independently checked archive and attributes improvements in GitHub issue-number order. A percentage on the leaderboard is the player’s awarded points divided by the original proof size. Provisional measurements can guide the next entry. Official points and bounty titles follow certified improvements. [Live scores and evidence](https://nikete.github.io/rh_golf/#standings)
+**One official point is one expression node removed from the smallest certified complete proof of ordinary RH.** The board starts at the independently checked archive and attributes improvements in GitHub issue-number order. A percentage on the leaderboard is the player’s awarded points divided by the original proof size. Provisional measurements can guide the next entry. [Live scores and evidence](https://nikete.github.io/rh_golf/#standings)
 
 ### Exact-reuse transformation certificates
 
@@ -145,5 +145,3 @@ For a fresh fork, enable Issues, select **GitHub Actions** as the Pages publishi
 ## Design precedents
 
 [Code Golf](https://code.golf/stats) reports over 12,000 golfers and 570,000 submissions. Its [per-hole scoring](https://code.golf/about) rewards repeated improvements and ties. [Project Euler](https://projecteuler.net/recent) maintains a numbered mathematical problem archive with problem-level solve counts. [lean.golf](https://deancureton.com/projects/lean-golf/) already demonstrates short Lean proof challenges with GitHub identity. RH Golf uses its own putting-green mark, scorecards and a critical-strip diagram. Public entries make each reduction inspectable.
-
-[Code Golf Stack Exchange’s standing bounties](https://codegolf.meta.stackexchange.com/questions/5243/list-of-bounties-with-no-deadline) offer reputation to anyone who beats a specified score. RH Golf keeps the open challenge and makes the award automatic.
