@@ -1,0 +1,60 @@
+{
+  "archive_deps": [
+    [
+      "GlobalTheory",
+      "CompanionTheory",
+      "SW",
+      "Core",
+      "SB"
+    ],
+    [
+      "GlobalTheory",
+      "CompanionTheory",
+      "SW",
+      "Core",
+      "NAQuad"
+    ],
+    [
+      "GlobalTheory",
+      "CompanionTheory",
+      "SW",
+      "Core",
+      "Impl"
+    ],
+    [
+      "PositivityTheory",
+      "PlacePermOperatorBicommutantSpan",
+      "impl_uniq"
+    ]
+  ],
+  "attempt": 1,
+  "author": "nikete",
+  "axioms": [
+    "Classical.choice",
+    "Quot.sound",
+    "propext"
+  ],
+  "axioms_scope": "pinned-export-upper-bound",
+  "certificate_sha256": "a37d3f1c6c77fc7f13f6f93d581e9262ed4cbdf3ae6e89f194cbee4841205509",
+  "commit": "596e00238d68a1b643b28a491543d46ceebf4a98",
+  "helpers": 0,
+  "hole": "CompanionTheory.PlacePermOperatorBicommutantSpan.impl_uniq",
+  "impact": {
+    "private_nodes": 213,
+    "shared": {},
+    "version": 1
+  },
+  "issue": 35,
+  "nodes": 213,
+  "reuse_donor": "PositivityTheory.PlacePermOperatorBicommutantSpan.impl_uniq",
+  "reuse_statement_id": 160003187,
+  "reuse_universe_parameters": [],
+  "run": 45188317563,
+  "season": "1",
+  "source_sha256": "a7b986bd2aab722cc72c17e38215bbcfb42d39dae8d46d7ea047216d243e47f2",
+  "source_url": "https://github.com/by-eureka/riemann-hypothesis/blob/709c6feee562d2ab2ff7b16b51345c67a70c801a/src/CompanionTheory/AutomorphicTheory/ThetaDilations/SqPosOfNe.lean#L125",
+  "standalone_rh_nodes": 2502208804,
+  "status": "accepted",
+  "submitted": "2026-11-23T13:52:50Z",
+  "verifier": "pinned-export-exact-reuse-v1"
+}
