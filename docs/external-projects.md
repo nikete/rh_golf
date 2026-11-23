@@ -4,10 +4,10 @@ Survey started 22 November 2026. This directory follows public work on shortenin
 
 | Project | What to import or watch |
 |---|---|
-| [VerifyTask](https://riemann.verifytask.cn/) / [Bohrium challenge](https://play.bohrium.com/challenges/lean-4-verification-rh-core-pillar-1-5-classical-z-c7f72729) | Five unconditional pillars plus full RH. The dashboard showed 410 total submissions and 48.13% combined token compression at 14:28 UTC on 22 November. Its full-RH card still showed the original character count. Follow individual attempts and public source patches. |
+| [VerifyTask](https://riemann.verifytask.cn/) / [Bohrium challenge](https://play.bohrium.com/challenges/lean-4-verification-rh-core-pillar-1-5-classical-z-c7f72729) | Five unconditional pillars plus full RH. The [live board](https://lean.claude-en.com/api/board) showed 1,019 component submissions across 25 component challenges on 23 November at 13:47 UTC. Its full-RH card still reported the original 980,408,459 characters. The Core 1 leader, Bohrium attempt 101164, reported 997 tokens. The board supplied a description and score; importing that revision requires its complete Lean source. |
 | [Yin-Kai Yu’s zero-free region](https://github.com/YinkaiYu/riemann-hypothesis-zero-free-region-lean4) and [compression toolkit](https://github.com/YinkaiYu/rh-compression-toolkit) | Tracks successive Core 1 proofs and Core 5 experiments. [Upstream PR 83](https://github.com/leanprover-community/riemann-hypothesis/pull/83) ports the single-file zero-free-region proof to the upstream project. |
 | [Lean community](https://github.com/leanprover-community/riemann-hypothesis/pulls) | Individual PRs listed below. Merged, open, and superseded changes can overlap. |
-| [GRH simplification drive](https://github.com/ShivMunagala/grh-simplification-drive) | Publishes patches and measurements. Reported 33 changes and 92,648,149 fewer written-out term nodes across its five-target cone. Reprice for ordinary RH. |
+| [GRH simplification drive](https://github.com/ShivMunagala/grh-simplification-drive) | Publishes patches and measurements. Reported 58 changes and 162,634,031 fewer written-out term nodes on 23 November across its five-target cone. Reprice for ordinary RH. |
 | [RH Lean Dissection](https://github.com/thekeunpie-hash/rh-lean-dissection) / [kernel backbone](https://github.com/thekeunpie-hash/rh-kernel-backbone) | Refactors behind upstream PRs 60, 65 and 71, plus dependency analysis. Credit the same patch once. |
 | [RiemannGaussian](https://github.com/dbsanfte/RiemannGaussian) | Principal-character route to ordinary RH using 31 new modules. [Upstream PR 38](https://github.com/leanprover-community/riemann-hypothesis/pull/38) is a candidate for complete-export checking. |
 | [Principia collaborative RH project](https://principia-math.com/projects/d16ab288ed353bc5b10e292ace0ddbc1) | Conductor-one conditional reductions and a signal bound in [PR 12](https://github.com/leanprover-community/riemann-hypothesis/pull/12). A component can enter when it matches a Golf target with all required hypotheses. |
@@ -21,6 +21,22 @@ Survey started 22 November 2026. This directory follows public work on shortenin
 | [MIT verification](https://math.mit.edu/~drew/grh/), [community comparator](https://github.com/leanprover-community/riemann-hypothesis), [independent replay](https://github.com/rohanarun/alpoge-rh-replay) | Baseline evidence and replay infrastructure. |
 | [Lean Explorer](https://github.com/rithn/riemann-lean-reader), [tamnd source mirror](https://github.com/tamnd/riemann-lean) | Navigation, provenance and discovery of new forks. |
 | [QRH Catalogue](https://github.com/HaileyStorm/QRH-Catalogue/blob/44824138c975e34552d35e314cda60b32ad346b5/generated/DIRECTORY.md) | Index of reusable components with source provenance. Its [RiemannGaussian integration](https://github.com/dbsanfte/RiemannGaussian/pull/1) links 18 records. |
+
+## 23 November 2026 imports
+
+All four single substitutions passed the issue judge with portable witnesses. Each combined measurement used the independent delta checker and the [certified #18 manifest](https://github.com/nikete/rh_golf/issues/18), SHA-256 `520dcf8e1a1165502e32d0976ad6872545f9bf4116266efcadd8d6ded5a5f82d`. The base measured 2,369,269,797 nodes. None of the four overlays qualified as a new record.
+
+| Pinned source | Entry | Certified standalone nodes | Official points | Locally measured combined nodes |
+|---|---|---:|---:|---:|
+| [Archimedean base change](https://github.com/Visio-Vanitas/riemann-hypothesis/blob/c5bfbbf9e1d83ce7b43b7890dcb9f17858cc68b3/src/Development/WeilBound/RepresentationTheoryGL/ArchimedeanBaseChange/ArchimedeanBaseChangeProof/SatakeExponents/BciOf.lean) | [#30 verdict](https://github.com/nikete/rh_golf/issues/30#issuecomment-7103119797) | 2,502,029,813 | 0 | 2,369,269,803 (6 more) |
+| [Gauss–Manin periods](https://github.com/leanprover-community/riemann-hypothesis/blob/003526389ad0e26c6e5682565ce57f273e7f52bf/src/Development/AbelianVarietyTheory/Proofs/DivisorProofs/ImportsSideExtra.lean) | [#31 verdict](https://github.com/nikete/rh_golf/issues/31#issuecomment-7103116276) | 2,501,810,342 | 0 | 2,369,269,797 (equal) |
+| [Weil operator D](https://github.com/by-eureka/riemann-hypothesis/blob/709c6feee562d2ab2ff7b16b51345c67a70c801a/src/CompanionTheory/AutomorphicTheory/ThetaDilations/SqPosOfNe.lean#L91) | [#34 verdict](https://github.com/nikete/rh_golf/issues/34#issuecomment-7103187839) | 2,502,222,852 | 0 | 2,369,270,845 (1,048 more) |
+| [Weil operator uniqueness](https://github.com/by-eureka/riemann-hypothesis/blob/709c6feee562d2ab2ff7b16b51345c67a70c801a/src/CompanionTheory/AutomorphicTheory/ThetaDilations/SqPosOfNe.lean#L125) | [#35 verdict](https://github.com/nikete/rh_golf/issues/35#issuecomment-7103184283) | 2,502,208,804 | 0 | 2,369,291,502 (21,705 more) |
+
+- [PR 119](https://github.com/leanprover-community/riemann-hypothesis/pull/119) repeats the Gauss–Manin redirect from PR 100. #31 credits the earlier artifact. The Čech pullback donor exists in the pinned index, but the PR's target name is absent. Deferred until mapped to a matching pinned declaration.
+- [PR 54, orbit bound](https://github.com/by-eureka/riemann-hypothesis/blob/709c6feee562d2ab2ff7b16b51345c67a70c801a/src/CompanionTheory/AutomorphicTheory/ThetaDilations/SqPosOfNe.lean#L145) did not pass the exact-signature check. Testing the actual Lean application with its hypotheses is still open.
+- [rh-trim](https://github.com/keithadler/rh-trim/blob/main/BUILD-STATUS.md) reported an 8.2% source-line reduction while repairing its build. Deferred pending a checkable proof edit. [Riemann@home](https://github.com/Riemann-at-home/riemann-at-home) coordinates baseline builds. [RH Proof Lab](https://github.com/eitamatgithub/rh-proof-lab) maps the argument.
+- [#32](https://github.com/nikete/rh_golf/issues/32) retries #22 with explicit complex and real types. [#33](https://github.com/nikete/rh_golf/issues/33) retries #24 with simplification of the first power. Both preserve the upstream statements and helpers.
 
 ## Entries sent to RH Golf
 
