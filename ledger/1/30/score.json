@@ -1,0 +1,68 @@
+{
+  "archive_deps": [
+    [
+      "PositivityTheory",
+      "Rg",
+      "BcN",
+      "BaseChangeIsobaricN"
+    ],
+    [
+      "PositivityTheory",
+      "Rg",
+      "BcB",
+      "F",
+      "FrameEx"
+    ],
+    [
+      "PositivityTheory",
+      "Rg",
+      "BcB",
+      "F",
+      "FrameBound"
+    ],
+    [
+      "PositivityTheory",
+      "Rg",
+      "BcB",
+      "F",
+      "FrameRead"
+    ],
+    [
+      "PositivityTheory",
+      "Rg",
+      "BcB",
+      "Plug2B",
+      "bci_of"
+    ]
+  ],
+  "attempt": 1,
+  "author": "nikete",
+  "axioms": [
+    "Classical.choice",
+    "Quot.sound",
+    "propext"
+  ],
+  "axioms_scope": "pinned-export-upper-bound",
+  "certificate_sha256": "59a89400f8c0ca1cb83e1f407d43743a0c02070016d550be53c7f6f3064b6a84",
+  "commit": "596e00238d68a1b643b28a491543d46ceebf4a98",
+  "helpers": 0,
+  "hole": "PositivityTheory.Rg.BcB.Plug2.bci_of",
+  "impact": {
+    "private_nodes": 8,
+    "shared": {},
+    "version": 1
+  },
+  "issue": 30,
+  "nodes": 8,
+  "reuse_donor": "PositivityTheory.Rg.BcB.Plug2B.bci_of",
+  "reuse_statement_id": 671432737,
+  "reuse_universe_parameters": [],
+  "run": 45187856163,
+  "season": "1",
+  "source_sha256": "3afaf1bcadf6f6c7c4b2ee864ca8f00c2d47d3dd7902b34c97f49aa0d9cf1454",
+  "source_url": "https://github.com/Visio-Vanitas/riemann-hypothesis/blob/c5bfbbf9e1d83ce7b43b7890dcb9f17858cc68b3/src/Development/WeilBound/RepresentationTheoryGL/ArchimedeanBaseChange/ArchimedeanBaseChangeProof/SatakeExponents/BciOf.lean",
+  "standalone_rh_nodes": 2502029813,
+  "status": "accepted",
+  "submitted": "2026-11-23T13:50:04Z",
+  "verifier": "pinned-export-exact-reuse-v1"
+}
