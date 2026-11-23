@@ -1,0 +1,1 @@
+reuse GlobalTheory.PeriodFamily.gaussManinPeriods_holds
