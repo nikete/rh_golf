@@ -1,0 +1,53 @@
+{
+  "archive_deps": [
+    [
+      "GlobalTheory",
+      "CompanionTheory",
+      "SW",
+      "Core",
+      "SB"
+    ],
+    [
+      "GlobalTheory",
+      "CompanionTheory",
+      "SW",
+      "Core",
+      "NADual"
+    ],
+    [
+      "PositivityTheory",
+      "PlacePermOperatorBicommutantSpan",
+      "schur"
+    ]
+  ],
+  "attempt": 1,
+  "author": "nikete",
+  "axioms": [
+    "Classical.choice",
+    "Quot.sound",
+    "propext"
+  ],
+  "axioms_scope": "pinned-export-upper-bound",
+  "certificate_sha256": "c4597c3ada5f5213b99f4f228f6051d98125f61813649f32be12ed992e6987ef",
+  "commit": "e52f7c37b64caf9e763806446dd733d21618a4a6",
+  "helpers": 0,
+  "hole": "CompanionTheory.PlacePermOperatorBicommutantSpan.schur",
+  "impact": {
+    "private_nodes": 211,
+    "shared": {},
+    "version": 1
+  },
+  "issue": 38,
+  "nodes": 211,
+  "reuse_donor": "PositivityTheory.PlacePermOperatorBicommutantSpan.schur",
+  "reuse_statement_id": 160001410,
+  "reuse_universe_parameters": [],
+  "run": 45413151733,
+  "season": "1",
+  "source_sha256": "953207baab404679ea1f748f3ab4531131123ed655d6b872a86e07f837bdb94b",
+  "source_url": "https://github.com/by-eureka/riemann-hypothesis/blob/709c6feee562d2ab2ff7b16b51345c67a70c801a/src/CompanionTheory/AutomorphicTheory/ThetaDilations/IsOpenCoset.lean#L192",
+  "standalone_rh_nodes": 2502222541,
+  "status": "accepted",
+  "submitted": "2026-11-24T14:21:16Z",
+  "verifier": "pinned-export-exact-reuse-v1"
+}
