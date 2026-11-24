@@ -1,0 +1,1 @@
+reuse PositivityTheory.LocalTateOrthogonality.Gcoh.cont_of_lc
