@@ -1,0 +1,75 @@
+{
+  "archive_deps": [
+    [
+      "GroundTheory",
+      "ProfCoh",
+      "IsDiscreteRep"
+    ],
+    [
+      "GroundTheory",
+      "ProfCoh",
+      "cochainsComplex"
+    ],
+    [
+      "GroundTheory",
+      "ProfCoh",
+      "cohomology"
+    ],
+    [
+      "GroundTheory",
+      "ProfCoh",
+      "cocycles"
+    ],
+    [
+      "GroundTheory",
+      "ProfCoh",
+      "cochainOf"
+    ],
+    [
+      "GroundTheory",
+      "ProfCoh",
+      "cocycle\u03b9"
+    ],
+    [
+      "GroundTheory",
+      "ProfCoh",
+      "cohomology\u03c0"
+    ],
+    [
+      "PositivityTheory",
+      "LocalTateOrthogonality",
+      "Gcoh",
+      "pi_zero_eq_zero_iff"
+    ]
+  ],
+  "attempt": 1,
+  "author": "nikete",
+  "axioms": [
+    "Classical.choice",
+    "Quot.sound",
+    "propext"
+  ],
+  "axioms_scope": "pinned-export-upper-bound",
+  "certificate_sha256": "6acf3e746aba4320934bc46e1964d90ae5c0c4ee2b5a3e0dac586a3543399817",
+  "commit": "e52f7c37b64caf9e763806446dd733d21618a4a6",
+  "helpers": 0,
+  "hole": "CompanionTheory.LocalTateOrthogonality.Gcoh.pi_zero_eq_zero_iff",
+  "impact": {
+    "private_nodes": 440,
+    "shared": {},
+    "version": 1
+  },
+  "issue": 39,
+  "nodes": 440,
+  "reuse_donor": "PositivityTheory.LocalTateOrthogonality.Gcoh.pi_zero_eq_zero_iff",
+  "reuse_statement_id": 683300467,
+  "reuse_universe_parameters": [],
+  "run": 45413226476,
+  "season": "1",
+  "source_sha256": "43973cb4293e28264830f1385e1957ef7b5170abb7fb3a7e71ca8c274525bbfb",
+  "source_url": "https://github.com/ShivMunagala/grh-simplification-drive/blob/9a5f728ab114551fd499d371bc58470b347a2591/patches/changes.patch#L406",
+  "standalone_rh_nodes": 2502225776,
+  "status": "accepted",
+  "submitted": "2026-11-24T14:21:39Z",
+  "verifier": "pinned-export-exact-reuse-v1"
+}
