@@ -1,0 +1,102 @@
+{
+  "status": "local graph measurement; mixed proof requires full-export certification",
+  "checker_commit": "a15887f460b22a4a4a8e3c382b552d6151662b41",
+  "ledger_commit": "115352035db1debdb94bee394737024e4aaa3f1f",
+  "base_issue": 18,
+  "base_manifest_url": "https://raw.githubusercontent.com/nikete/rh_golf/e40e3248dbce95e4b2a746f722293dee1de3b7df/candidates/optimized-2369269797.jsonl.gz",
+  "base_manifest_sha256": "520dcf8e1a1165502e32d0976ad6872545f9bf4116266efcadd8d6ded5a5f82d",
+  "base_nodes": 2369269797,
+  "custom_replacements": [
+    {
+      "issue": 6,
+      "certificate_sha256": "d90f57b75aae046557346f8f44a2edce019864932d2890e760d3662f851aefe5",
+      "source_sha256": "f0a2c8ef7b5e6f648c0b3cdd2e3f7146923d594870bbe53a81e8e03fabd7ad58",
+      "impact": {
+        "private_nodes": 1026,
+        "shared": {
+          "Golf.Reflection._proof_1": 30
+        },
+        "version": 1
+      },
+      "target": "Formalism.VW.rh_of_right",
+      "archive_deps": [],
+      "source_url": "https://github.com/nikete/rh_golf/issues/6"
+    },
+    {
+      "issue": 25,
+      "certificate_sha256": "ba481f3fda85f8d59ba48b6b9c39bcb2f45dbf9e9d457b9e8daf2e8399c9ba1a",
+      "source_sha256": "200f0c4eaa43c95b10d87eea95806402d2178a80ed5697408f4baea116f1c02d",
+      "impact": {
+        "private_nodes": 20663,
+        "shared": {},
+        "version": 1
+      },
+      "target": "UpperTheory.Reformulated.B.NormIndexQuadratic.glob_neg_one",
+      "archive_deps": [
+        [
+          "UpperTheory",
+          "Reformulated",
+          "B",
+          "NormIndexQuadratic",
+          "cv"
+        ],
+        [
+          "GlobalTheory",
+          "QNorm",
+          "hasseNormSt"
+        ],
+        [
+          "UpperTheory",
+          "Reformulated",
+          "B",
+          "NormIndexQuadratic",
+          "Kv"
+        ],
+        [
+          "UpperTheory",
+          "Reformulated",
+          "B",
+          "NormIndexQuadratic",
+          "Pl"
+        ],
+        [
+          "GlobalTheory",
+          "LocalQuad",
+          "exists_ringHom_adicCompletion"
+        ]
+      ],
+      "source_url": "https://github.com/hhh2210/riemann-hypothesis/blob/ae11f0f2b01356117a3acb5a4fb888c322bc7b8e/src/Development/AutomorphicArithmetic/IntegralCasts/CapelliIdentities/NormIndexQuadratic.lean#L39"
+    },
+    {
+      "issue": 50,
+      "certificate_sha256": "b79202a84532d79ca238f31ba48ddef0f00668f01c08f6747ed56ad38c434a0a",
+      "source_sha256": "167e5baaee44a6869ea491a729a7ab4e7a8c3bc115a719b9b32665c7ba9c60ca",
+      "impact": {
+        "private_nodes": 887,
+        "shared": {},
+        "version": 1
+      },
+      "target": "_private.Formalism.SharpRestriction.LevelLetterCocycles.RepresentationCongruences.SmulEqZeroOfAevalProd.0.Formalism.MainNotions.N.FrobeniusPowerSeries.prod_X_sub_C_dvd_of_eval_eq_zero_of_injOn",
+      "archive_deps": [],
+      "source_url": "https://github.com/ebyrwa/riemann-hypothesis/blob/ecdf5fff4daf1d0d2385000f7b2001e9ee90d55a/src/Formalism/SharpRestriction/LevelLetterCocycles/RepresentationCongruences/ExistsLiftMapEqPrimePowSmul.lean#L305"
+    }
+  ],
+  "measured_nodes": [
+    {
+      "issues": [
+        18,
+        50
+      ],
+      "nodes": 2369268906
+    },
+    {
+      "issues": [
+        18,
+        6,
+        25,
+        50
+      ],
+      "nodes": 2368934381
+    }
+  ]
+}
