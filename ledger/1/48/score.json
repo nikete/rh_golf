@@ -1,0 +1,46 @@
+{
+  "archive_deps": [
+    [
+      "GlobalTheory",
+      "Published",
+      "WeilThetaConvergence"
+    ],
+    [
+      "PositivityTheory",
+      "Rg",
+      "Sw",
+      "Glob",
+      "wtc"
+    ]
+  ],
+  "attempt": 1,
+  "author": "nikete",
+  "axioms": [
+    "Classical.choice",
+    "Quot.sound",
+    "propext"
+  ],
+  "axioms_scope": "pinned-export-upper-bound",
+  "certificate_sha256": "e9912fb0b21a27022a5d83da0935dc0031c601786922c27c35c6f2b7ed8cb0bb",
+  "commit": "a15887f460b22a4a4a8e3c382b552d6151662b41",
+  "helpers": 0,
+  "hole": "UpperTheory.Lit.weilThetaConvergence",
+  "impact": {
+    "private_nodes": 2,
+    "shared": {},
+    "version": 1
+  },
+  "issue": 48,
+  "nodes": 2,
+  "reuse_donor": "PositivityTheory.Rg.Sw.Glob.wtc",
+  "reuse_statement_id": 148718620,
+  "reuse_universe_parameters": [],
+  "run": 45632940939,
+  "season": "1",
+  "source_sha256": "17a7be315bbaec96c9dfe7c60b132fc0ed8c3ae851ce87acbe7635c095815f0b",
+  "source_url": "https://github.com/leanprover-community/riemann-hypothesis/blob/003526389ad0e26c6e5682565ce57f273e7f52bf/src/Development/AutomorphicArithmetic/ThetaCorrespondence/WeilRepresentation/WeilTheta.lean#L9",
+  "standalone_rh_nodes": 2502059315,
+  "status": "accepted",
+  "submitted": "2026-11-25T14:20:11Z",
+  "verifier": "pinned-export-exact-reuse-v1"
+}
