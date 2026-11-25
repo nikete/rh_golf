@@ -1,0 +1,29 @@
+{
+  "archive_deps": [],
+  "archive_module": "Formalism.SharpRestriction.LevelLetterCocycles.RepresentationCongruences.SmulEqZeroOfAevalProd",
+  "attempt": 1,
+  "author": "nikete",
+  "axioms": [
+    "propext",
+    "Classical.choice",
+    "Quot.sound"
+  ],
+  "certificate_sha256": "b79202a84532d79ca238f31ba48ddef0f00668f01c08f6747ed56ad38c434a0a",
+  "commit": "a15887f460b22a4a4a8e3c382b552d6151662b41",
+  "helpers": 0,
+  "hole": "_private.Formalism.SharpRestriction.LevelLetterCocycles.RepresentationCongruences.SmulEqZeroOfAevalProd.0.Formalism.MainNotions.N.FrobeniusPowerSeries.prod_X_sub_C_dvd_of_eval_eq_zero_of_injOn",
+  "impact": {
+    "private_nodes": 887,
+    "shared": {},
+    "version": 1
+  },
+  "issue": 50,
+  "nodes": 887,
+  "run": 45633116222,
+  "season": "1",
+  "source_sha256": "167e5baaee44a6869ea491a729a7ab4e7a8c3bc115a719b9b32665c7ba9c60ca",
+  "source_url": "https://github.com/ebyrwa/riemann-hypothesis/blob/ecdf5fff4daf1d0d2385000f7b2001e9ee90d55a/src/Formalism/SharpRestriction/LevelLetterCocycles/RepresentationCongruences/ExistsLiftMapEqPrimePowSmul.lean#L305",
+  "standalone_rh_nodes": 2502226377,
+  "status": "accepted",
+  "submitted": "2026-11-25T14:21:09Z"
+}
