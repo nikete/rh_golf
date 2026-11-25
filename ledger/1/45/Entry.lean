@@ -1,0 +1,1 @@
+reuse CompanionTheory.ThKR.realMetaplecticRepresentation_holds
