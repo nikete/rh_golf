@@ -1,0 +1,44 @@
+{
+  "archive_deps": [
+    [
+      "GlobalTheory",
+      "Published",
+      "AbelianHodgeDeRham"
+    ],
+    [
+      "GlobalTheory",
+      "T",
+      "abelianScheme_deRham_locallyFree_hodgeDegenerates"
+    ]
+  ],
+  "attempt": 1,
+  "author": "nikete",
+  "axioms": [
+    "Classical.choice",
+    "Quot.sound",
+    "propext"
+  ],
+  "axioms_scope": "pinned-export-upper-bound",
+  "certificate_sha256": "828e4b87f74242bccb4fe6dcfb2c8736563e3ae680b1ca00bb880f507b8ecba0",
+  "commit": "a15887f460b22a4a4a8e3c382b552d6151662b41",
+  "helpers": 0,
+  "hole": "MainStatements.Hodge.Free.abelianHodgeDeRham",
+  "impact": {
+    "private_nodes": 2,
+    "shared": {},
+    "version": 1
+  },
+  "issue": 41,
+  "nodes": 2,
+  "reuse_donor": "GlobalTheory.T.abelianScheme_deRham_locallyFree_hodgeDegenerates",
+  "reuse_statement_id": 883336973,
+  "reuse_universe_parameters": [],
+  "run": 45632807434,
+  "season": "1",
+  "source_sha256": "6604af2e00326d926764c2de7d6c58a761515d0440275d1501cf796ef342b5d0",
+  "source_url": "https://github.com/leanprover-community/riemann-hypothesis/blob/003526389ad0e26c6e5682565ce57f273e7f52bf/src/Development/WeilBound/CoreStatements/AutomorphicKernels/AbelianDeRham/AbelianHodgeDeRham/AbelianHodgeDeRham.lean#L5",
+  "standalone_rh_nodes": 2498353927,
+  "status": "accepted",
+  "submitted": "2026-11-25T14:19:28Z",
+  "verifier": "pinned-export-exact-reuse-v1"
+}
