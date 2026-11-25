@@ -1,0 +1,45 @@
+{
+  "archive_deps": [
+    [
+      "GlobalTheory",
+      "IndefiniteRowSideFullHecke",
+      "SphericalSectionVariables",
+      "UnramDoublingInert"
+    ],
+    [
+      "GlobalTheory",
+      "InertZeta",
+      "unramDoublingInert"
+    ]
+  ],
+  "attempt": 1,
+  "author": "nikete",
+  "axioms": [
+    "Classical.choice",
+    "Quot.sound",
+    "propext"
+  ],
+  "axioms_scope": "pinned-export-upper-bound",
+  "certificate_sha256": "2c8bdee6f0279be5ebf7dab52bb410d36c42039185aa5e835059223c9f73ffae",
+  "commit": "a15887f460b22a4a4a8e3c382b552d6151662b41",
+  "helpers": 0,
+  "hole": "GlobalTheory.CompanionTheory.InertZetaTop.unramDoublingInert",
+  "impact": {
+    "private_nodes": 2,
+    "shared": {},
+    "version": 1
+  },
+  "issue": 42,
+  "nodes": 2,
+  "reuse_donor": "GlobalTheory.InertZeta.unramDoublingInert",
+  "reuse_statement_id": 96605777,
+  "reuse_universe_parameters": [],
+  "run": 45632812365,
+  "season": "1",
+  "source_sha256": "a7d8fffd3951c0384652318bd85537ebd6769a8482227d90fb2584c5a2ae8a30",
+  "source_url": "https://github.com/leanprover-community/riemann-hypothesis/blob/003526389ad0e26c6e5682565ce57f273e7f52bf/src/Development/AutomorphicSpectrum/Proofs/TwistedProofs/UnramDoublingInert.lean#L28",
+  "standalone_rh_nodes": 2501624268,
+  "status": "accepted",
+  "submitted": "2026-11-25T14:19:29Z",
+  "verifier": "pinned-export-exact-reuse-v1"
+}
