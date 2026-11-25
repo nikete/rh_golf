@@ -1,0 +1,69 @@
+{
+  "archive_deps": [
+    [
+      "GlobalTheory",
+      "EtC",
+      "PSh"
+    ],
+    [
+      "GlobalTheory",
+      "EtC",
+      "Spc"
+    ],
+    [
+      "GlobalTheory",
+      "EtC",
+      "Ht"
+    ],
+    [
+      "GlobalTheory",
+      "EtC",
+      "sch"
+    ],
+    [
+      "GlobalTheory",
+      "EtC",
+      "sp"
+    ],
+    [
+      "GlobalTheory",
+      "EtC",
+      "kum"
+    ],
+    [
+      "GlobalTheory",
+      "EtC",
+      "kum_surjective"
+    ]
+  ],
+  "attempt": 1,
+  "author": "nikete",
+  "axioms": [
+    "Classical.choice",
+    "Quot.sound",
+    "propext"
+  ],
+  "axioms_scope": "pinned-export-upper-bound",
+  "certificate_sha256": "fc31507461812f9b19c3872c26209bf166517f80582835b13dfe61fa0139ae9b",
+  "commit": "a15887f460b22a4a4a8e3c382b552d6151662b41",
+  "helpers": 0,
+  "hole": "UpperTheory.Cb.exists_unit_kummer_eq_of_picard_torsionFree",
+  "impact": {
+    "private_nodes": 317,
+    "shared": {},
+    "version": 1
+  },
+  "issue": 46,
+  "nodes": 317,
+  "reuse_donor": "GlobalTheory.EtC.kum_surjective",
+  "reuse_statement_id": 1011769643,
+  "reuse_universe_parameters": [],
+  "run": 45632829879,
+  "season": "1",
+  "source_sha256": "16d0c5ec56e0f6f400ff384a8701d5afa84ca4eab3ec5b3295f0811ee0a94489",
+  "source_url": "https://github.com/leanprover-community/riemann-hypothesis/blob/003526389ad0e26c6e5682565ce57f273e7f52bf/src/Development/AutomorphicArithmetic/Foundations/EtaleClopenDescent/ExistsUnitKummerEqOfPicardTorsionFree.lean#L5",
+  "standalone_rh_nodes": 2502008552,
+  "status": "accepted",
+  "submitted": "2026-11-25T14:19:36Z",
+  "verifier": "pinned-export-exact-reuse-v1"
+}
