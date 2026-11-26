@@ -1,0 +1,1 @@
+reuse PositivityTheory.LocalTateOrthogonality.Gcoh.pi_succ_eq_zero_iff
