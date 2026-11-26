@@ -1,0 +1,141 @@
+{
+  "archive_deps": [
+    [
+      "ReciprocityTheory",
+      "ChartRestriction",
+      "G",
+      "Geo",
+      "Tor",
+      "Datum",
+      "La"
+    ],
+    [
+      "GlobalTheory",
+      "PureType",
+      "disjoint_lat"
+    ],
+    [
+      "GlobalTheory",
+      "CompanionTheory",
+      "Ar",
+      "Fl",
+      "sgnRt"
+    ],
+    [
+      "ReciprocityTheory",
+      "ChartRestriction",
+      "G",
+      "Geo",
+      "Tor",
+      "Host",
+      "d_prime"
+    ],
+    [
+      "ReciprocityTheory",
+      "ChartRestriction",
+      "G",
+      "Geo",
+      "Tor",
+      "Host"
+    ],
+    [
+      "ReciprocityTheory",
+      "ChartRestriction",
+      "G",
+      "Geo",
+      "Tor",
+      "Datum"
+    ],
+    [
+      "ReciprocityTheory",
+      "ChartRestriction",
+      "G",
+      "Geo",
+      "Tor",
+      "Host",
+      "d"
+    ],
+    [
+      "GlobalTheory",
+      "PureType",
+      "lat"
+    ],
+    [
+      "ReciprocityTheory",
+      "ChartRestriction",
+      "G",
+      "Geo",
+      "Tor",
+      "Host",
+      "sqrt_neg_disc_sq"
+    ],
+    [
+      "ReciprocityTheory",
+      "ChartRestriction",
+      "G",
+      "Geo",
+      "Tor",
+      "Host",
+      "rt0"
+    ],
+    [
+      "GlobalTheory",
+      "CompanionTheory",
+      "Ar",
+      "Fl",
+      "IsPure"
+    ],
+    [
+      "ReciprocityTheory",
+      "ChartRestriction",
+      "G",
+      "Geo",
+      "Tor",
+      "Datum",
+      "acg"
+    ],
+    [
+      "ReciprocityTheory",
+      "ChartRestriction",
+      "G",
+      "Geo",
+      "Tor",
+      "Datum",
+      "mod"
+    ],
+    [
+      "ReciprocityTheory",
+      "ChartRestriction",
+      "G",
+      "Geo",
+      "Tor",
+      "IsPeriod"
+    ]
+  ],
+  "archive_module": "Development.AutomorphicSpectrum.Proofs.AlgebraProofs.PureFamilyDecompositionStatement",
+  "attempt": 1,
+  "author": "nikete",
+  "axioms": [
+    "propext",
+    "Classical.choice",
+    "Quot.sound"
+  ],
+  "certificate_sha256": "ca55ed1d5af6491daf8fe61291b1964a1721781ceaec3cf1fb9c321505872127",
+  "commit": "f9bf72b48a1b3170d20691811d310dc3dac7f26a",
+  "helpers": 0,
+  "hole": "GlobalTheory.T.pure_family_decomposition",
+  "impact": {
+    "private_nodes": 4901,
+    "shared": {},
+    "version": 1
+  },
+  "issue": 67,
+  "nodes": 4901,
+  "run": 45848337786,
+  "season": "1",
+  "source_sha256": "5b0c64503c522ae5e58be97cbd92ec09ed25d560805dc9296b4370cc9f13aa68",
+  "source_url": "https://lean.claude-en.com/api/attempt/112986",
+  "standalone_rh_nodes": 2502225667,
+  "status": "accepted",
+  "submitted": "2026-11-26T15:21:46Z"
+}
