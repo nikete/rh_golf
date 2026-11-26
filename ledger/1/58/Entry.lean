@@ -1,0 +1,1 @@
+reuse PositivityTheory.LocalTateOrthogonality.Gcoh.exists_coc
