@@ -415,13 +415,12 @@ def render(ledger, output):
     (output / "agent-prompt.txt").write_text(prompt + "\n")
     page("index.html", "RH Golf · Riemann proof league", f"""
     <section class='hero'><div class='herocopy'>
-    <h1>Riemann<br><em>Proof Golf</em></h1><p class='intro'>We search the public web for shorter Lean proofs of the Riemann hypothesis. You can also submit a replacement directly. Every candidate goes through the same judge.</p>
+    <h1>Riemann<br><em>Proof Golf</em></h1><p class='intro'>Submit a shorter Lean proof of the Riemann hypothesis or replace a single theorem. The judge measures the effect on the complete proof.</p>
     <div class='buttons'><a class='primary' href='{entry_url}'>Submit a replacement ↗</a>
     <a class='plain' href='#agent'>Play with an agent →</a></div></div>
     <figure><img src='critical-strip.svg' width='530' height='322' alt='The critical line at real part one half, with the first three positive zeta zero heights marked.'>
     <figcaption>Critical strip <span>ζ(s) = 0</span></figcaption></figure></section>
     <section id='verification'><h2>What counts as a shorter proof?</h2>
-      <p>We look for improvements in papers, repositories, pull requests and other proof competitions. When we find public proof code that fits an archive declaration, we enter it and credit the URL of the original finding as the player. Ideas still awaiting code or missing hypotheses stay in the <a href='{GITHUB}/blob/main/docs/external-projects.md'>external project directory</a>.</p>
       <p>The judge checks that the replacement proves the same statement with the same assumptions. It measures the complete proof of ordinary RH by counting the Lean expression nodes it still needs above the fixed Lean and Mathlib libraries. Shared dependencies count once. Deleting a thousand lines can save zero nodes if the proof never used them.</p>
       <p>A checked theorem substitution can be certified against the verified archive. A custom proof first receives a local kernel check and a provisional measurement. Official credit requires certification of the complete result. Each node below the previous certified record earns one point. <a href='rules.html#validation'>What the judge checks →</a></p>
     </section>
