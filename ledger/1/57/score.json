@@ -1,0 +1,45 @@
+{
+  "archive_deps": [
+    [
+      "ReciprocityTheory",
+      "Gal",
+      "dn"
+    ],
+    [
+      "PositivityTheory",
+      "LocalTateOrthogonality",
+      "Gcoh",
+      "dn_zero"
+    ]
+  ],
+  "attempt": 1,
+  "author": "nikete",
+  "axioms": [
+    "Classical.choice",
+    "Quot.sound",
+    "propext"
+  ],
+  "axioms_scope": "pinned-export-upper-bound",
+  "certificate_sha256": "3acd3641974fb93839ccb836f95f367d33f70c22932cb96f981c2697566fd182",
+  "commit": "3a81f974c641edb7eb1cae486a75a970b07d9560",
+  "helpers": 0,
+  "hole": "CompanionTheory.LocalTateOrthogonality.Gcoh.dn_zero",
+  "impact": {
+    "private_nodes": 311,
+    "shared": {},
+    "version": 1
+  },
+  "issue": 57,
+  "nodes": 311,
+  "reuse_donor": "PositivityTheory.LocalTateOrthogonality.Gcoh.dn_zero",
+  "reuse_statement_id": 683297131,
+  "reuse_universe_parameters": [],
+  "run": 45832611697,
+  "season": "1",
+  "source_sha256": "707e00c421a15ffd45a88158cca429bcd615909f61ed9613bcad8ca92b9710d9",
+  "source_url": "https://github.com/ShivMunagala/grh-simplification-drive/blob/9a5f728ab114551fd499d371bc58470b347a2591/patches/changes.patch#L394",
+  "standalone_rh_nodes": 2502226255,
+  "status": "accepted",
+  "submitted": "2026-11-26T13:47:39Z",
+  "verifier": "pinned-export-exact-reuse-v1"
+}
