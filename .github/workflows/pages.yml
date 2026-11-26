@@ -1,56 +1,25 @@
-name: Publish standings
+name: Withdraw public standings
 on:
-  workflow_run:
-    workflows: ["Judge a proof", "Certify a complete proof", "Certify theorem substitutions"]
-    types: [completed]
-  workflow_dispatch:
   push:
     branches: [main]
+    paths: ['.github/workflows/pages.yml']
 permissions: {}
-# Only publication is coalesced. Every accepted run first writes its own durable receipt.
 concurrency:
   group: rh-golf-site
   cancel-in-progress: false
 jobs:
-  render:
-    if: github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && (github.event.workflow_run.event == 'issues' || contains(fromJSON('["Certify a complete proof","Certify theorem substitutions"]'), github.event.workflow_run.name)))
-    runs-on: ubuntu-24.04
-    permissions:
-      contents: write
-      pages: write
-    outputs:
-      mode: ${{ steps.pages.outputs.mode }}
-    steps:
-      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
-        with:
-          ref: main
-      - run: bash judge/snapshot.sh
-      - name: Check the repository's Pages publishing source
-        id: pages
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          mode=$(gh api "repos/$GITHUB_REPOSITORY/pages" --jq '.build_type')
-          case "$mode" in legacy|workflow) ;; *) exit 1 ;; esac
-          echo "mode=$mode" >> "$GITHUB_OUTPUT"
-      - uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3
-        with:
-          path: public
-      - name: Publish the static branch and request a Pages build
-        if: steps.pages.outputs.mode == 'legacy'
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: bash judge/publish-site.sh
-  deploy:
-    needs: render
-    if: needs.render.outputs.mode == 'workflow'
+  withdraw:
     runs-on: ubuntu-24.04
     permissions:
       pages: write
       id-token: write
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+    environment: github-pages
     steps:
-      - id: deployment
-        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4
+      - name: Prepare a 404-only site
+        run: |
+          mkdir public
+          echo '<!doctype html><html lang="en"><meta charset="utf-8"><title>Page not found</title><h1>Page not found</h1></html>' > public/404.html
+      - uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa
+        with:
+          path: public
+      - uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e
