@@ -1,0 +1,1 @@
+reuse PositivityTheory.LocalTateOrthogonality.Gcoh.neg_one_pow_smul'
